@@ -1,5 +1,8 @@
 import strawberry
 from prisma import Prisma
+from strawberry.fastapi import GraphQLRouter
+from fastapi import FastAPI
+import uvicorn
 
 prisma = Prisma()
 
@@ -26,5 +29,24 @@ class Mutation:
         user = await prisma.user.create(data={"name": name, "email": email})
         await prisma.disconnect()
         return User(id=user.id, name=user.name, email=user.email)
+    
+    @strawberry.mutation
+    async def delete_user(self, id: int) -> bool:
+        await prisma.connect()
+        await prisma.user.delete(where={"id": id})
+        await prisma.disconnect()
+        return True
+    
+    @strawberry.mutation
+    async def update_user(self, id: int, name: str, email: str) -> User:
+        await prisma.connect()
+        user = await prisma.user.update(
+            where={"id": id},
+            data={"name": name, "email": email}
+        )
+        await prisma.disconnect()
+        return User(id=user.id, name=user.name, email=user.email)
 
 schema = strawberry.Schema(query=Query, mutation=Mutation)
+
+
