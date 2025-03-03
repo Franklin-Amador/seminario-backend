@@ -1,4 +1,4 @@
 prisma==0.15.0
 fastapi==0.115.11
-uvircorn==0.34.0
+uvicorn==0.34.0
 strawberry-graphql==0.261.1
