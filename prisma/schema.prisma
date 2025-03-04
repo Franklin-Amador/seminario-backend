@@ -4,18 +4,546 @@
 // Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
 // Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 
-
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
 generator client {
-  provider = "prisma-client-py"
+  provider             = "prisma-client-py"
+  // experimental_features = ["enable_experimental_decimal"]
 }
 
+// model User {
+//   id    Int    @id @default(autoincrement())
+//   name  String
+//   email String @unique
+// }
+
+// Usuarios
 model User {
-  id    Int    @id @default(autoincrement())
-  name  String
-  email String @unique
+  id           Int       @id @default(autoincrement()) @map("id")
+  username     String    @unique
+  password     String
+  firstname    String
+  lastname     String
+  email        String    @unique
+  auth         String    @default("manual")
+  confirmed    Boolean   @default(false)
+  lang         String    @default("es")
+  timezone     String    @default("99")
+  firstaccess  DateTime?
+  lastaccess   DateTime?
+  lastlogin    DateTime?
+  currentlogin DateTime?
+  deleted      Boolean   @default(false)
+  suspended    Boolean   @default(false)
+  mnethostid   Int       @default(1)
+  institution  String?
+  department   String?
+  timecreated  DateTime
+  timemodified DateTime
+
+  // Relaciones
+  roles             UserRole[]
+  enrollments       Enrollment[]
+  submissions       Submission[]
+  courseCompletions CourseCompletion[]
+
+  @@map("mdl_user")
+}
+
+// Cursos
+model Course {
+  id           Int       @id @default(autoincrement()) @map("id")
+  category     Int
+  sortorder    Int
+  fullname     String
+  shortname    String
+  idnumber     String?
+  summary      String?   @db.Text
+  format       String    @default("topics")
+  showgrades   Boolean   @default(true)
+  newsitems    Int       @default(5)
+  startdate    DateTime
+  enddate      DateTime?
+  visible      Boolean   @default(true)
+  groupmode    Int       @default(0)
+  timecreated  DateTime
+  timemodified DateTime
+
+  // Relaciones
+  sections    CourseSection[]
+  modules     CourseModule[]
+  enrollments Enrollment[]
+  completions CourseCompletion[]
+  categories  CategoryCourse[]
+
+  @@map("mdl_course")
+}
+
+// Categorías de cursos
+model Category {
+  id           Int      @id @default(autoincrement()) @map("id")
+  name         String
+  idnumber     String?
+  description  String?  @db.Text
+  parent       Int      @default(0)
+  sortorder    Int
+  coursecount  Int      @default(0)
+  visible      Boolean  @default(true)
+  visibleold   Boolean  @default(true)
+  timemodified DateTime
+  depth        Int
+  path         String
+  theme        String?
+
+  // Relaciones
+  courses CategoryCourse[]
+
+  @@map("mdl_course_categories")
+}
+
+// Relación categorías-cursos
+model CategoryCourse {
+  categoryId Int @map("category")
+  courseId   Int @map("course")
+
+  category Category @relation(fields: [categoryId], references: [id])
+  course   Course   @relation(fields: [courseId], references: [id])
+
+  @@id([categoryId, courseId])
+  @@map("mdl_course_category_map")
+}
+
+// Secciones de cursos
+model CourseSection {
+  id           Int      @id @default(autoincrement()) @map("id")
+  course       Int
+  section      Int
+  name         String?
+  summary      String?  @db.Text
+  sequence     String?  @db.Text // Lista de IDs de módulos separados por comas
+  visible      Boolean  @default(true)
+  availability String?  @db.Text // JSON con reglas de disponibilidad
+  timemodified DateTime
+
+  // Relaciones
+  courseRelation Course @relation(fields: [course], references: [id])
+
+  @@map("mdl_course_sections")
+}
+
+// Tipos de módulos/actividades
+model Module {
+  id       Int       @id @default(autoincrement()) @map("id")
+  name     String    @unique
+  cron     Int       @default(0)
+  lastcron DateTime?
+  search   String?
+  visible  Boolean   @default(true)
+
+  // Relaciones
+  courseModules CourseModule[]
+
+  @@map("mdl_modules")
+}
+
+// Instancias de módulos en cursos
+model CourseModule {
+  id                        Int       @id @default(autoincrement()) @map("id")
+  course                    Int
+  module                    Int
+  instance                  Int
+  section                   Int
+  idnumber                  String?
+  added                     DateTime
+  score                     Int       @default(0)
+  indent                    Int       @default(0)
+  visible                   Boolean   @default(true)
+  visibleoncoursepage       Boolean   @default(true)
+  visibleold                Boolean   @default(true)
+  groupmode                 Int       @default(0)
+  groupingid                Int       @default(0)
+  completion                Int       @default(0)
+  completiongradeitemnumber Int?
+  completionview            Boolean   @default(false)
+  completionexpected        DateTime?
+  availability              String?   @db.Text // JSON con reglas de disponibilidad
+  showdescription           Boolean   @default(false)
+
+  // Relaciones
+  courseRelation Course @relation(fields: [course], references: [id])
+  moduleRelation Module @relation(fields: [module], references: [id])
+
+  @@map("mdl_course_modules")
+}
+
+// Roles
+model Role {
+  id          Int     @id @default(autoincrement()) @map("id")
+  name        String
+  shortname   String  @unique
+  description String? @db.Text
+  sortorder   Int
+  archetype   String?
+
+  // Relaciones
+  userRoles UserRole[]
+
+  @@map("mdl_role")
+}
+
+// Asignaciones de roles
+model UserRole {
+  id           Int      @id @default(autoincrement()) @map("id")
+  roleid       Int
+  contextid    Int
+  userid       Int
+  timemodified DateTime
+  modifierid   Int
+  component    String?
+  itemid       Int      @default(0)
+  sortorder    Int      @default(0)
+
+  // Relaciones
+  role Role @relation(fields: [roleid], references: [id])
+  user User @relation(fields: [userid], references: [id])
+
+  @@map("mdl_role_assignments")
+}
+
+// Matrículas
+model Enrollment {
+  id           Int       @id @default(autoincrement()) @map("id")
+  enrolid      Int
+  userid       Int
+  courseid     Int
+  status       Int       @default(0) // 0=active, 1=suspended
+  timestart    DateTime?
+  timeend      DateTime?
+  timecreated  DateTime
+  timemodified DateTime
+
+  // Relaciones
+  user   User   @relation(fields: [userid], references: [id])
+  course Course @relation(fields: [courseid], references: [id])
+
+  @@map("mdl_user_enrolments")
+}
+
+// Tareas
+model Assignment {
+  id                          Int       @id @default(autoincrement()) @map("id")
+  course                      Int
+  name                        String
+  intro                       String    @db.Text
+  introformat                 Int       @default(0)
+  alwaysshowdescription       Boolean   @default(true)
+  nosubmissions               Boolean   @default(false)
+  submissiondrafts            Boolean   @default(false)
+  sendnotifications           Boolean   @default(false)
+  sendlatenotifications       Boolean   @default(false)
+  duedate                     DateTime?
+  allowsubmissionsfromdate    DateTime?
+  grade                       Int?
+  timemodified                DateTime
+  requiresubmissionstatement  Boolean   @default(false)
+  completionsubmit            Boolean   @default(false)
+  cutoffdate                  DateTime?
+  gradingduedate              DateTime?
+  teamsubmission              Boolean   @default(false)
+  requireallteammemberssubmit Boolean   @default(false)
+  teamsubmissiongroupingid    Int       @default(0)
+  blindmarking                Boolean   @default(false)
+  revealidentities            Boolean   @default(false)
+  attemptreopenmethod         String    @default("none")
+  maxattempts                 Int       @default(-1)
+  markingworkflow             Boolean   @default(false)
+  markingallocation           Boolean   @default(false)
+
+  // Relaciones
+  submissions Submission[]
+
+  @@map("mdl_assign")
+}
+
+// Entregas de tareas
+model Submission {
+  id            Int      @id @default(autoincrement()) @map("id")
+  assignment    Int
+  userid        Int
+  timecreated   DateTime
+  timemodified  DateTime
+  status        String
+  groupid       Int      @default(0)
+  attemptnumber Int      @default(0)
+  latest        Boolean  @default(false)
+
+  // Relaciones
+  assignmentRelation Assignment @relation(fields: [assignment], references: [id])
+  user               User       @relation(fields: [userid], references: [id])
+
+  @@map("mdl_assign_submission")
+}
+
+// Cuestionarios/Exámenes
+model Quiz {
+  id                    Int       @id @default(autoincrement()) @map("id")
+  course                Int
+  name                  String
+  intro                 String    @db.Text
+  introformat           Int       @default(0)
+  timeopen              DateTime?
+  timeclose             DateTime?
+  timelimit             Int?
+  preferredbehaviour    String
+  attempts              Int       @default(0)
+  grademethod           Int       @default(1)
+  decimalpoints         Int       @default(2)
+  questiondecimalpoints Int       @default(-1)
+  sumgrades             Int       @default(0)
+  grade                 Int       @default(0)
+  timecreated           DateTime
+  timemodified          DateTime
+  password              String?
+  subnet                String?
+  browsersecurity       String?
+  delay1                Int       @default(0)
+  delay2                Int       @default(0)
+  showuserpicture       Int       @default(0)
+  showblocks            Int       @default(0)
+  navmethod             String    @default("free")
+  shuffleanswers        Int       @default(1)
+
+  @@map("mdl_quiz")
+}
+
+// Finalización de cursos
+model CourseCompletion {
+  id            Int       @id @default(autoincrement()) @map("id")
+  userid        Int
+  course        Int
+  timeenrolled  DateTime
+  timestarted   DateTime
+  timecompleted DateTime?
+  reaggregate   DateTime?
+
+  // Relaciones
+  user           User   @relation(fields: [userid], references: [id])
+  courseRelation Course @relation(fields: [course], references: [id])
+
+  @@map("mdl_course_completions")
+}
+
+// Foros
+model Forum {
+  id                    Int       @id @default(autoincrement()) @map("id")
+  course                Int
+  type                  String    @default("general")
+  name                  String
+  intro                 String    @db.Text
+  introformat           Int       @default(0)
+  assessed              Int       @default(0)
+  assesstimestart       DateTime?
+  assesstimefinish      DateTime?
+  scale                 Int       @default(0)
+  maxbytes              Int       @default(0)
+  maxattachments        Int       @default(1)
+  forcesubscribe        Int       @default(0)
+  trackingtype          Int       @default(1)
+  rsstype               Int       @default(0)
+  rssarticles           Int       @default(0)
+  timemodified          DateTime
+  warnafter             Int       @default(0)
+  blockafter            Int       @default(0)
+  blockperiod           Int       @default(0)
+  completiondiscussions Int       @default(0)
+  completionreplies     Int       @default(0)
+  completionposts       Int       @default(0)
+  displaywordcount      Boolean   @default(false)
+
+  // Relaciones
+  discussions ForumDiscussion[]
+
+  @@map("mdl_forum")
+}
+
+// Discusiones de foros
+model ForumDiscussion {
+  id           Int       @id @default(autoincrement()) @map("id")
+  course       Int
+  forum        Int
+  name         String
+  firstpost    Int
+  userid       Int
+  groupid      Int       @default(-1)
+  assessed     Boolean   @default(true)
+  timemodified DateTime
+  usermodified Int       @default(0)
+  timestart    DateTime?
+  timeend      DateTime?
+  pinned       Boolean   @default(false)
+
+  // Relaciones
+  forumRelation Forum       @relation(fields: [forum], references: [id])
+  posts         ForumPost[]
+
+  @@map("mdl_forum_discussions")
+}
+
+// Mensajes de foros
+model ForumPost {
+  id            Int      @id @default(autoincrement()) @map("id")
+  discussion    Int
+  parent        Int      @default(0)
+  userid        Int
+  created       DateTime
+  modified      DateTime
+  mailed        Int      @default(0)
+  subject       String
+  message       String   @db.Text
+  messageformat Int      @default(0)
+  messagetrust  Int      @default(0)
+  attachment    String?
+  totalscore    Int      @default(0)
+  mailnow       Int      @default(0)
+
+  // Relaciones
+  discussionRelation ForumDiscussion @relation(fields: [discussion], references: [id])
+
+  @@map("mdl_forum_posts")
+}
+
+// Calificaciones
+model GradeItem {
+  id               Int       @id @default(autoincrement()) @map("id")
+  courseid         Int
+  categoryid       Int?
+  itemname         String?
+  itemtype         String
+  itemmodule       String?
+  iteminstance     Int?
+  itemnumber       Int?
+  iteminfo         String?   @db.Text
+  idnumber         String?
+  calculation      String?   @db.Text
+  gradetype        Int       @default(1)
+  grademax         Int   @default(100)
+  grademin         Int  @default(0)
+  scaleid          Int?
+  outcomeid        Int?
+  gradepass        Int   @default(0) 
+  multfactor       Int   @default(1) 
+  plusfactor       Int   @default(0) 
+  aggregationcoef  Int   @default(0)
+  aggregationcoef2 Int   @default(0)
+  sortorder        Int       @default(0)
+  display          Int       @default(0)
+  decimals         Int?
+  hidden           Int       @default(0)
+  locked           Int       @default(0)
+  locktime         DateTime?
+  needsupdate      Int       @default(0)
+  weightoverride   Int       @default(0)
+  timecreated      DateTime
+  timemodified     DateTime
+
+  // Relaciones
+  grades Grade[]
+
+  @@map("mdl_grade_items")
+}
+
+// Calificaciones individuales
+model Grade {
+  id                Int       @id @default(autoincrement()) @map("id")
+  itemid            Int
+  userid            Int
+  rawgrade          Int?
+  rawgrademax       Int       @default(100)
+  rawgrademin       Int       @default(0)
+  finalgrade        Int?
+  hidden            Int       @default(0)
+  locked            Int       @default(0)
+  locktime          DateTime?
+  exported          Int       @default(0)
+  overridden        Int       @default(0)
+  excluded          Int       @default(0)
+  feedback          String?   @db.Text
+  feedbackformat    Int       @default(0)
+  information       String?   @db.Text
+  informationformat Int       @default(0)
+  timecreated       DateTime
+  timemodified      DateTime
+
+  // Relaciones
+  gradeItem GradeItem @relation(fields: [itemid], references: [id])
+
+  @@map("mdl_grade_grades")
+}
+
+// Recursos (archivos)
+model Resource {
+  id              Int      @id @default(autoincrement()) @map("id")
+  course          Int
+  name            String
+  intro           String?  @db.Text
+  introformat     Int      @default(0)
+  tobemigrated    Int      @default(0)
+  legacyfiles     Int      @default(0)
+  legacyfileslast Int?
+  display         Int      @default(0)
+  displayoptions  String?  @db.Text
+  filterfiles     Int      @default(0)
+  revision        Int      @default(0)
+  timemodified    DateTime
+
+  @@map("mdl_resource")
+}
+
+// SCORM
+model Scorm {
+  id                       Int       @id @default(autoincrement()) @map("id")
+  course                   Int
+  name                     String
+  scormtype                String    @default("local")
+  reference                String
+  intro                    String    @db.Text
+  introformat              Int       @default(0)
+  version                  String
+  maxgrade                 Int       @default(0)
+  grademethod              Int       @default(0)
+  whatgrade                Int       @default(0)
+  maxattempt               Int       @default(1)
+  forcecompleted           Boolean   @default(false)
+  forcenewattempt          Int       @default(0)
+  lastattemptlock          Boolean   @default(false)
+  masteryoverride          Boolean   @default(true)
+  displayattemptstatus     Int       @default(1)
+  displaycoursestructure   Boolean   @default(false)
+  updatefreq               Int       @default(0)
+  sha1hash                 String?
+  md5hash                  String?
+  revision                 Int       @default(0)
+  launch                   Int       @default(0)
+  skipview                 Int       @default(1)
+  hidebrowse               Boolean   @default(false)
+  hidetoc                  Int       @default(0)
+  nav                      Int       @default(1)
+  navpositionleft          Int?
+  navpositiontop           Int?
+  auto                     Boolean   @default(false)
+  popup                    Boolean   @default(false)
+  width                    Int       @default(100)
+  height                   Int       @default(600)
+  timeopen                 DateTime?
+  timeclose                DateTime?
+  timemodified             DateTime
+  completionstatusrequired Int?
+  completionscorerequired  Int?
+  completionstatusallscos  Int?
+  autocommit               Boolean   @default(false)
+
+  @@map("mdl_scorm")
 }
