@@ -260,37 +260,6 @@ mutation CreateRole {
 }
 ```
 
-## Mantenimiento
-
-### Gestión de Contenedores
-
-```bash
-# Ver logs en tiempo real
-docker-compose logs -f
-
-# Reiniciar los servicios
-docker-compose restart
-
-# Detener los contenedores
-docker-compose down
-
-# Reconstruir las imágenes
-docker-compose build --no-cache
-
-# Iniciar los contenedores reconstruidos
-docker-compose up -d
-```
-
-### Backups de Base de Datos
-
-```bash
-# Crear backup de la base de datos
-docker-compose exec db pg_dump -U postgres campus_virtual > backup_$(date +%Y%m%d).sql
-
-# Restaurar backup
-cat backup_20250305.sql | docker-compose exec -T db psql -U postgres campus_virtual
-```
-
 ## Notas de Desarrollo
 
 ### Base de Datos
@@ -319,7 +288,3 @@ Los archivos se almacenan dentro del contenedor y se persisten usando volúmenes
 - Implementar rate limiting y otros mecanismos de seguridad
 - Utilizar un proxy inverso como Nginx para servir la aplicación
 - Configurar HTTPS
-
-## Licencia
-
-[MIT](LICENSE)
