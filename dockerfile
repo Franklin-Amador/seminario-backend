@@ -11,20 +11,21 @@ RUN apt-get update && apt-get install -y \
 # Instalar Prisma CLI globalmente
 RUN npm install -g prisma
 
-# Copiar requirements.txt y archivo de schema de Prisma
-COPY requirements.txt .
-COPY ./prisma/ ./prisma/
-
-# Instalar dependencias de Python
-RUN pip install --no-cache-dir -r requirements.txt
-
 # Crear directorios para archivos subidos
 RUN mkdir -p /app/uploads/assignments /app/uploads/resources /app/uploads/profiles
+
+# Copiar requirements.txt primero para aprovechar la caché de Docker
+COPY requirements.txt .
+
+# Instalar dependencias de Python de manera explícita
+RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir python-multipart==0.0.9
 
 # Copiar el resto del código fuente
 COPY . .
 
-# Generar cliente Prisma
+# Copiar y generar cliente Prisma
+COPY ./prisma/ ./prisma/
 RUN cd prisma && prisma generate
 
 # Exponer el puerto donde correrá la aplicación
