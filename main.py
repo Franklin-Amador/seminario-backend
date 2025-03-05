@@ -1,79 +1,72 @@
-
+from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from prisma import Prisma
 from strawberry.asgi import GraphQL
 from schema import schema
-from fastapi import FastAPI, HTTPException
-from prisma import Prisma
-from models.Roles import RoleBase, RoleResponse
-from typing import List
+from controllers.file_controller import router as file_router
+from controllers.rest_controller import router as rest_router
 
-
-
-app = FastAPI()
+app = FastAPI(title="Campus Virtual API", description="Backend API para Campus Virtual")
 prisma = Prisma()
 
-# # Ruta para GraphQL
-app.add_route("/graphql", GraphQL(schema))
+# Configurar CORS
+origins = [
+    "http://localhost",
+    "http://localhost:3000",
+    "http://localhost:8000",
+    "http://127.0.0.1:3000",
+    # Añadir aquí los dominios de producción cuando corresponda
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Añadir la ruta de GraphQL
+graphql_app = GraphQL(schema)
+app.add_route("/graphql", graphql_app)
+app.add_websocket_route("/graphql", graphql_app)
+
+# Incluir los routers
+app.include_router(file_router)
+app.include_router(rest_router)
 
 @app.get("/")
 def read_root():
-    return {"message": "Welcome to FastAPI with GraphQL and Prisma!"}
+    return {
+        "message": "Bienvenido a la API del Campus Virtual",
+        "docs": "/docs",
+        "graphql": "/graphql"
+    }
 
-# Conectar y desconectar Prisma automáticamente
+# Conectar a la base de datos al iniciar
 @app.on_event("startup")
 async def startup():
     await prisma.connect()
 
+# Desconectar de la base de datos al cerrar
 @app.on_event("shutdown")
 async def shutdown():
     await prisma.disconnect()
 
-# * Endpoint para crear un nuevo usuario
-# @app.post("/users", response_model=UserResponse)
-# async def create_user(user: UserBase):
-#     new_user = await prisma.user.create(data={"name": user.name, "email": user.email})
-#     return new_user
+@app.get("/healthcheck")
+async def healthcheck():
+    try:
+        # Verificar conexión a la base de datos
+        await prisma.connect()
+        await prisma.role.count()
+        await prisma.disconnect()
+        return {"status": "ok", "message": "API y base de datos funcionando correctamente"}
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error en el healthcheck: {str(e)}"
+        )
 
-
-# Crear un nuevo rol
-@app.post("/roles", response_model=RoleResponse)
-async def create_role(role: RoleBase):
-    new_role = await prisma.role.create(data=role.dict())
-    return new_role
-
-# Obtener todos los roles
-@app.get("/roles", response_model=List[RoleResponse])
-async def get_roles():
-    roles = await prisma.role.find_many()
-    return roles
-
-@app.get("/debug")
-async def debug():
-    return {"models": dir(prisma)}
-
-
-# Obtener un rol por ID
-@app.get("/roles/{role_id}", response_model=RoleResponse)
-async def get_role(role_id: int):
-    role = await prisma.role.find_unique(where={"id": role_id})
-    if not role:
-        raise HTTPException(status_code=404, detail="Role not found")
-    return role
-
-# Actualizar un rol
-@app.put("/roles/{role_id}", response_model=RoleResponse)
-async def update_role(role_id: int, role: RoleBase):
-    updated_role = await prisma.role.update(
-        where={"id": role_id},
-        data=role.dict()
-    )
-    if not updated_role:
-        raise HTTPException(status_code=404, detail="Role not found")
-    return updated_role
-
-# Eliminar un rol
-@app.delete("/roles/{role_id}", response_model=RoleResponse)
-async def delete_role(role_id: int):
-    deleted_role = await prisma.role.delete(where={"id": role_id})
-    if not deleted_role:
-        raise HTTPException(status_code=404, detail="Role not found")
-    return deleted_role
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
