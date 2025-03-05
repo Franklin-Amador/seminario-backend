@@ -5,6 +5,7 @@ from strawberry.asgi import GraphQL
 from schema import schema
 from controllers.file_controller import router as file_router
 from controllers.rest_controller import router as rest_router
+from controllers.login_controller import router as login_router
 
 app = FastAPI(title="Campus Virtual API", description="Backend API para Campus Virtual")
 prisma = Prisma()
@@ -32,6 +33,7 @@ app.add_route("/graphql", graphql_app)
 app.add_websocket_route("/graphql", graphql_app)
 
 # Incluir los routers
+app.include_router(login_router)  # Añadido el router de login
 app.include_router(file_router)
 app.include_router(rest_router)
 
