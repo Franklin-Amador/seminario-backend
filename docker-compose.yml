@@ -8,9 +8,10 @@ services:
     depends_on:
       - db
     environment:
-      - DATABASE_URL=postgresql://postgres:postgres@db:5432/mydb
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/campus_virtual
     volumes:
       - .:/app
+      - uploads_data:/app/uploads
     restart: always
     command: sh -c "cd prisma && prisma migrate deploy && cd .. && uvicorn main:app --host 0.0.0.0 --port 8000 --reload"
 
@@ -21,10 +22,11 @@ services:
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=mydb
+      - POSTGRES_DB=campus_virtual
     volumes:
       - postgres_data:/var/lib/postgresql/data
     restart: always
 
 volumes:
   postgres_data:
+  uploads_data:

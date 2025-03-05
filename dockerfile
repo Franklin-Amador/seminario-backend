@@ -18,6 +18,9 @@ COPY ./prisma/ ./prisma/
 # Instalar dependencias de Python
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Crear directorios para archivos subidos
+RUN mkdir -p /app/uploads/assignments /app/uploads/resources /app/uploads/profiles
+
 # Copiar el resto del código fuente
 COPY . .
 
