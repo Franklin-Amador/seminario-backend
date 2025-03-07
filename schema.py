@@ -1,10 +1,11 @@
 import strawberry
 from prisma import Prisma
 from strawberry.fastapi import GraphQLRouter
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 import uvicorn
 from datetime import datetime
 from typing import List, Optional
+import bcrypt
 
 prisma = Prisma()
 
@@ -673,6 +674,38 @@ class Mutation:
         if not deleted_enrollment:
             raise Exception("Enrollment not found")
         return deleted_enrollment
+    
+# Mutación de login sin tokens
+    @strawberry.mutation
+    async def login(self, email: str, password: str) -> User:
+        await prisma.connect()
+        user = await prisma.user.find_unique(where={"email": email})
+        await prisma.disconnect()
+
+        # Verificar si el usuario existe
+        if not user:
+            raise HTTPException(status_code=404, detail="Usuario no encontrado")
+
+        # Verificar la contraseña utilizando bcrypt
+        if not bcrypt.checkpw(password.encode("utf-8"), user.password.encode("utf-8")):
+            raise HTTPException(status_code=401, detail="Contraseña incorrecta")
+
+    # Retornar los datos del usuario
+        return User(
+            id=user.id,
+            username=user.username,
+            email=user.email,
+            firstname=user.firstname,
+            lastname=user.lastname,
+            confirmed=user.confirmed,
+            deleted=user.deleted,
+            suspended=user.suspended,
+            institution=user.institution,  # Opción de obtenerlo de la base de datos
+            department=user.department,    # Opción de obtenerlo de la base de datos
+            timecreated=user.timecreated,  # Asegúrate de pasar los campos
+            timemodified=user.timemodified # Asegúrate de pasar los campos
+        )
+
 
 # Create schema
 schema = strawberry.Schema(query=Query, mutation=Mutation)

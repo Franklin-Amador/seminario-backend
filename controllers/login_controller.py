@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException, status
 from prisma import Prisma
 from pydantic import BaseModel
+from bcrypt import checkpw
 
 # Modelo para la solicitud de login
 class LoginRequest(BaseModel):
@@ -39,7 +40,7 @@ async def login(login_data: LoginRequest):
     )
     
     # Verificar si el usuario existe y la contraseña es correcta
-    if not user or user.password != login_data.password:  # En producción, usar hash
+    if not user or not checkpw(login_data.password.encode('utf-8'), user.password.encode('utf-8')):
         await prisma.disconnect()
         return LoginResponse(
             success=False,
