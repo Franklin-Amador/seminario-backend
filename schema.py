@@ -183,6 +183,7 @@ class Enrollment:
     enrolid: int
     userid: int
     courseid: int
+    course: Course
     status: int
     timestart: Optional[datetime]
     timeend: Optional[datetime]
@@ -412,7 +413,7 @@ class Query:
     @strawberry.field
     async def user_enrollments(self, user_id: int) -> List[Enrollment]:
         await prisma.connect()
-        enrollments = await prisma.enrollment.find_many(where={"userid": user_id})
+        enrollments = await prisma.enrollment.find_many(where={"userid": user_id}, include={"course": True})
         await prisma.disconnect()
         return enrollments
 
