@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException, status
 from prisma import Prisma
 from typing import List, Optional
 from datetime import datetime
+import bcrypt
 
 from models.base import (
     UserBase, UserResponse,
@@ -135,12 +136,14 @@ async def create_user(user: UserBase):
                 detail="Username or email already exists"
             )
         
+         # Encriptar la contraseña
+        hashed_password = bcrypt.hashpw(user.password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
         # Crear el nuevo usuario
         now = datetime.utcnow()
         new_user = await prisma.user.create(
             data={
                 "username": user.username,
-                "password": user.password,  # En producción, esto debería estar hasheado
+                "password": hashed_password,  # En producción, esto debería estar hasheado
                 "firstname": user.firstname,
                 "lastname": user.lastname,
                 "email": user.email,
