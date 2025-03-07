@@ -2,10 +2,11 @@ FROM python:3.9
 
 WORKDIR /app
 
-# Instalar Node.js (necesario para Prisma)
+# Instalar Node.js y PostgreSQL client
 RUN apt-get update && apt-get install -y \
     nodejs \
     npm \
+    postgresql-client \
     && rm -rf /var/lib/apt/lists/*
 
 # Instalar Prisma CLI globalmente
