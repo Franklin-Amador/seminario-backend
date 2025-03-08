@@ -6,7 +6,7 @@ import uvicorn
 from datetime import datetime
 from typing import List, Optional
 import bcrypt
-
+from bcrypt import checkpw, gensalt, hashpw
 prisma = Prisma()
 
 # User Types
@@ -706,6 +706,24 @@ class Mutation:
             timemodified=user.timemodified # Asegúrate de pasar los campos
         )
 
+    # Mutación para cambiar la contraseña
+    @strawberry.mutation
+    async def change_password(self, email: str, new_password: str) -> User:
+        await prisma.connect()
+        user = await prisma.user.find_unique(where={"email": email})
+
+        if not user:
+            await prisma.disconnect()
+            raise HTTPException(status_code=404, detail="Usuario no encontrado")
+
+        hashed_new_password = bcrypt.hashpw(new_password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+
+        updated_user = await prisma.user.update(
+            where={"email": email},
+            data={"password": hashed_new_password, "timemodified": datetime.utcnow()}
+        )
+        await prisma.disconnect()
+        return updated_user
 
 # Create schema
 schema = strawberry.Schema(query=Query, mutation=Mutation)
