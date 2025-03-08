@@ -2,11 +2,11 @@ FROM python:3.9
 
 WORKDIR /app
 
-# Instalar Node.js y PostgreSQL client
+# Instalar Node.js y mariadb client
 RUN apt-get update && apt-get install -y \
     nodejs \
     npm \
-    postgresql-client \
+    mariadb-client \
     && rm -rf /var/lib/apt/lists/*
 
 # Instalar Prisma CLI globalmente
