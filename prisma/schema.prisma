@@ -5,13 +5,13 @@
 // Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider = "sqlserver"
+  url      =  "sqlserver://db:1433;database=campus_virtual;user=sa;password=StrongPwd2025;encrypt=false;trustServerCertificate=true;"
+
 }
 
 generator client {
   provider             = "prisma-client-py"
-  // experimental_features = ["enable_experimental_decimal"]
 }
 
 // model User {

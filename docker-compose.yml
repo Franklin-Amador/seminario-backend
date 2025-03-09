@@ -1,6 +1,4 @@
-
 version: '3.8'
-
 services:
   app:
     build: .
@@ -9,7 +7,7 @@ services:
     depends_on:
       - db
     environment:
-      - DATABASE_URL=postgresql://postgres:postgres@db:5432/campus_virtual
+      - DATABASE_URL=sqlserver://sa:StrongPwd2025@db:1433;database=campus_virtual;trustServerCertificate=true
     volumes:
       - .:/app
       - uploads_data:/app/uploads
@@ -19,24 +17,30 @@ services:
       prisma migrate deploy &&
       cd .. &&
       echo 'Esperando que la base de datos esté disponible...' &&
-        until PGPASSWORD=postgres psql -h db -U postgres -d campus_virtual -c 'SELECT 1'; do
+      until /opt/mssql-tools/bin/sqlcmd -S db -U sa -P StrongPwd2025 -d campus_virtual -Q 'SELECT 1'; do
         sleep 1;
       done &&
       echo 'Base de datos lista, ejecutando script de inicialización...' &&
-      PGPASSWORD=postgres psql -h db -U postgres -d campus_virtual -f /app/scripts/init.sql &&
+      /opt/mssql-tools/bin/sqlcmd -S db -U sa -P StrongPwd2025 -d campus_virtual -i /app/scripts/init.sql &&
       uvicorn main:app --host 0.0.0.0 --port 8000 --reload"
   db:
-    image: postgres:13
+    image: mcr.microsoft.com/mssql/server:2019-latest
     ports:
-      - "5432:5432"
+      - "1433:1433"
     environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=campus_virtual
+      - ACCEPT_EULA=Y
+      - SA_PASSWORD=StrongPwd2025
+      - MSSQL_PID=Express
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - sqlserver_data:/var/opt/mssql
     restart: always
+    healthcheck:
+      test: /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P StrongPwd2025 -Q "SELECT 1" || exit 1
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
 
 volumes:
-  postgres_data:
+  sqlserver_data:
   uploads_data:
