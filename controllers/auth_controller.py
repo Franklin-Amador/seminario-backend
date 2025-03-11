@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from pydantic import BaseModel
+from db import prisma_client as prisma
 
 # Esquema para el modelo de token
 class Token(BaseModel):
@@ -30,7 +31,6 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 30
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
-prisma = Prisma()
 
 # Función para verificar la contraseña
 def verify_password(plain_password, hashed_password):
@@ -42,9 +42,7 @@ def get_password_hash(password):
 
 # Función para autenticar usuario
 async def authenticate_user(username: str, password: str):
-    await prisma.connect()
     user = await prisma.user.find_unique(where={"username": username})
-    await prisma.disconnect()
     
     if not user:
         return False

@@ -14,7 +14,7 @@ class RoleResponse(RoleBase):
     id: int
     
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class UserBase(BaseModel):
     username: str
@@ -34,7 +34,7 @@ class UserResponse(UserBase):
     timemodified: datetime
     
     class Config:
-        orm_mode = True
+        from_attributes = True
         
 class CourseBase(BaseModel):
     category: int
@@ -54,7 +54,7 @@ class CourseResponse(CourseBase):
     timemodified: datetime
     
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class CategoryBase(BaseModel):
     name: str
@@ -71,7 +71,7 @@ class CategoryResponse(CategoryBase):
     timemodified: datetime
     
     class Config:
-        orm_mode = True
+        from_attributes = True
         
 class CourseSectionBase(BaseModel):
     course: int
@@ -86,7 +86,7 @@ class CourseSectionResponse(CourseSectionBase):
     timemodified: datetime
     
     class Config:
-        orm_mode = True
+        from_attributes = True
         
 class AssignmentBase(BaseModel):
     course: int
@@ -102,7 +102,7 @@ class AssignmentResponse(AssignmentBase):
     timemodified: datetime
     
     class Config:
-        orm_mode = True
+        from_attributes = True
         
 class SubmissionBase(BaseModel):
     assignment: int
@@ -118,7 +118,7 @@ class SubmissionResponse(SubmissionBase):
     latest: bool
     
     class Config:
-        orm_mode = True
+        from_attributes = True
         
 class ForumBase(BaseModel):
     course: int
@@ -132,7 +132,7 @@ class ForumResponse(ForumBase):
     timemodified: datetime
     
     class Config:
-        orm_mode = True
+        from_attributes = True
         
 class ForumDiscussionBase(BaseModel):
     course: int
@@ -146,7 +146,7 @@ class ForumDiscussionResponse(ForumDiscussionBase):
     timemodified: datetime
     
     class Config:
-        orm_mode = True
+        from_attributes = True
         
 class ForumPostBase(BaseModel):
     discussion: int
@@ -162,7 +162,7 @@ class ForumPostResponse(ForumPostBase):
     modified: datetime
     
     class Config:
-        orm_mode = True
+        from_attributes = True
         
 class EnrollmentBase(BaseModel):
     enrolid: int
@@ -178,7 +178,7 @@ class EnrollmentResponse(EnrollmentBase):
     timemodified: datetime
     
     class Config:
-        orm_mode = True
+        from_attributes = True
         
 class GradeItemBase(BaseModel):
     courseid: int
@@ -195,7 +195,7 @@ class GradeItemResponse(GradeItemBase):
     timemodified: datetime
     
     class Config:
-        orm_mode = True
+        from_attributes = True
         
 class GradeBase(BaseModel):
     itemid: int
@@ -210,7 +210,7 @@ class GradeResponse(GradeBase):
     timemodified: datetime
     
     class Config:
-        orm_mode = True
+        from_attributes = True
         
 class CourseCompletionBase(BaseModel):
     userid: int
@@ -223,7 +223,7 @@ class CourseCompletionResponse(CourseCompletionBase):
     id: int
     
     class Config:
-        orm_mode = True
+        from_attributes = True
         
 class ResourceBase(BaseModel):
     course: int
@@ -236,4 +236,4 @@ class ResourceResponse(ResourceBase):
     timemodified: datetime
     
     class Config:
-        orm_mode = True
+        from_attributes = True
