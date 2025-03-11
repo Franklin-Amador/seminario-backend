@@ -1,9 +1,9 @@
 from fastapi import APIRouter, HTTPException, status
-from prisma import Prisma
 from pydantic import BaseModel
 from bcrypt import checkpw
 import bcrypt
 from fastapi import Body
+from db import prisma_client
 
 # Modelo para la solicitud de login
 class LoginRequest(BaseModel):
@@ -32,7 +32,6 @@ class BulkPasswordUpdateRequest(BaseModel):
     admin_key: str
     new_password: str = "1234"
 
-prisma = Prisma()
 
 # Router para login
 router = APIRouter(
@@ -43,10 +42,9 @@ router = APIRouter(
 # Endpoint para login
 @router.post("", response_model=LoginResponse)
 async def login(login_data: LoginRequest):
-    await prisma.connect()
     
     # Buscar usuario por nombre de usuario
-    user = await prisma.user.find_first(
+    user = await prisma_client.user.find_first(
         where={
             "username": login_data.username
         }
@@ -54,21 +52,20 @@ async def login(login_data: LoginRequest):
     
     # Verificar si el usuario existe y la contraseña es correcta
     if not user or not checkpw(login_data.password.encode('utf-8'), user.password.encode('utf-8')):
-        await prisma.disconnect()
+        await prisma_client.disconnect()
         return LoginResponse(
             success=False,
             message="Credenciales incorrectas"
         )
     
     # Obtener roles del usuario
-    user_roles = await prisma.userrole.find_many(
+    user_roles = await prisma_client.userrole.find_many(
         where={"userid": user.id},
         include={"role": True}
     )
     
     roles = [{"id": ur.role.id, "name": ur.role.name, "shortname": ur.role.shortname} for ur in user_roles]
     
-    await prisma.disconnect()
     
     # Devolver información del usuario
     return LoginResponse(
@@ -88,16 +85,14 @@ class UpdatePasswordRequest(BaseModel):
 
 @router.put("/update-password", response_model=LoginResponse)
 async def update_password(update_data: UpdatePasswordRequest):
-    await prisma.connect()
     
     # Buscar usuario por email
-    user = await prisma.user.find_first(
+    user = await prisma_client.user.find_first(
         where={"email": update_data.email}
-    )
-    
+    )   
     # Verificar si el usuario existe
     if not user:
-        await prisma.disconnect()
+        await prisma_client.disconnect()
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Usuario no encontrado"
@@ -105,12 +100,10 @@ async def update_password(update_data: UpdatePasswordRequest):
     
     # Actualizar la contraseña del usuario
     hashed_new_password = bcrypt.hashpw(update_data.new_password.encode('utf-8'), bcrypt.gensalt())
-    await prisma.user.update(
+    await prisma_client.user.update(
         where={"id": user.id},
         data={"password": hashed_new_password.decode('utf-8')}
     )
-    
-    await prisma.disconnect()
     
     return LoginResponse(
         success=True,
@@ -130,11 +123,11 @@ async def reset_all_passwords(update_data: BulkPasswordUpdateRequest):
             detail="Clave de administrador incorrecta"
         )
     
-    await prisma.connect()
+    await prisma_client.connect()
     
     try:
         # Obtener todos los usuarios
-        users = await prisma.user.find_many()
+        users = await prisma_client.user.find_many()
         
         # Encriptar la nueva contraseña una sola vez (todos tendrán la misma)
         hashed_password = bcrypt.hashpw(
@@ -147,7 +140,7 @@ async def reset_all_passwords(update_data: BulkPasswordUpdateRequest):
         
         # Actualizar cada usuario individualmente
         for user in users:
-            await prisma.user.update(
+            await prisma_client.user.update(
                 where={"id": user.id},
                 data={"password": hashed_password}
             )
@@ -165,5 +158,3 @@ async def reset_all_passwords(update_data: BulkPasswordUpdateRequest):
             detail=f"Error al actualizar contraseñas: {str(e)}"
         )
     
-    finally:
-        await prisma.disconnect()

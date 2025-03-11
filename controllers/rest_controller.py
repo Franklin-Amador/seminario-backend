@@ -1,8 +1,8 @@
 from fastapi import APIRouter, HTTPException, status
-from prisma import Prisma
 from typing import List, Optional
 from datetime import datetime
 import bcrypt
+from db import prisma_client as prisma
 
 from models.base import (
     UserBase, UserResponse,
@@ -21,8 +21,6 @@ from models.base import (
     RoleBase, RoleResponse
 )
 
-prisma = Prisma()
-
 # Router para REST API básica
 router = APIRouter(
     prefix="/api",
@@ -34,7 +32,6 @@ router = APIRouter(
 
 @router.post("/roles", response_model=RoleResponse)
 async def create_role(role: RoleBase):
-    await prisma.connect()
     try:
         new_role = await prisma.role.create(
             data={
@@ -51,35 +48,24 @@ async def create_role(role: RoleBase):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Error creating role: {str(e)}"
         )
-    finally:
-        await prisma.disconnect()
 
 @router.get("/roles", response_model=List[RoleResponse])
 async def get_roles():
-    await prisma.connect()
-    try:
-        roles = await prisma.role.find_many()
-        return roles
-    finally:
-        await prisma.disconnect()
+    roles = await prisma.role.find_many()
+    return roles
 
 @router.get("/roles/{role_id}", response_model=RoleResponse)
 async def get_role(role_id: int):
-    await prisma.connect()
-    try:
-        role = await prisma.role.find_unique(where={"id": role_id})
-        if not role:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Role not found"
-            )
-        return role
-    finally:
-        await prisma.disconnect()
+    role = await prisma.role.find_unique(where={"id": role_id})
+    if not role:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Role not found"
+        )
+    return role
 
 @router.put("/roles/{role_id}", response_model=RoleResponse)
 async def update_role(role_id: int, role: RoleBase):
-    await prisma.connect()
     try:
         updated_role = await prisma.role.update(
             where={"id": role_id},
@@ -97,12 +83,9 @@ async def update_role(role_id: int, role: RoleBase):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Error updating role: {str(e)}"
         )
-    finally:
-        await prisma.disconnect()
 
 @router.delete("/roles/{role_id}", response_model=RoleResponse)
 async def delete_role(role_id: int):
-    await prisma.connect()
     try:
         deleted_role = await prisma.role.delete(where={"id": role_id})
         return deleted_role
@@ -111,14 +94,11 @@ async def delete_role(role_id: int):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Error deleting role: {str(e)}"
         )
-    finally:
-        await prisma.disconnect()
 
 # ----- OPERACIONES CRUD PARA USUARIOS ----- #
 
 @router.post("/users", response_model=UserResponse)
 async def create_user(user: UserBase):
-    await prisma.connect()
     try:
         # Verificar si el nombre de usuario o email ya existen
         existing_user = await prisma.user.find_first(
@@ -167,51 +147,40 @@ async def create_user(user: UserBase):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Error creating user: {str(e)}"
         )
-    finally:
-        await prisma.disconnect()
 
 @router.get("/users", response_model=List[UserResponse])
 async def get_users(search: Optional[str] = None):
-    await prisma.connect()
-    try:
-        # Buscar usuarios
-        if search:
-            users = await prisma.user.find_many(
-                where={
-                    "OR": [
-                        {"username": {"contains": search}},
-                        {"firstname": {"contains": search}},
-                        {"lastname": {"contains": search}},
-                        {"email": {"contains": search}}
-                    ]
-                }
-            )
-        else:
-            users = await prisma.user.find_many()
-        
-        return users
-    finally:
-        await prisma.disconnect()
+    # Buscar usuarios
+    if search:
+        users = await prisma.user.find_many(
+            where={
+                "OR": [
+                    {"username": {"contains": search}},
+                    {"firstname": {"contains": search}},
+                    {"lastname": {"contains": search}},
+                    {"email": {"contains": search}}
+                ]
+            }
+        )
+    else:
+        users = await prisma.user.find_many()
+    
+    return users
 
 @router.get("/users/{user_id}", response_model=UserResponse)
 async def get_user(user_id: int):
-    await prisma.connect()
-    try:
-        user = await prisma.user.find_unique(where={"id": user_id})
-        
-        if not user:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="User not found"
-            )
-        
-        return user
-    finally:
-        await prisma.disconnect()
+    user = await prisma.user.find_unique(where={"id": user_id})
+    
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+    
+    return user
 
 @router.put("/users/{user_id}", response_model=UserResponse)
 async def update_user(user_id: int, user: UserBase):
-    await prisma.connect()
     try:
         # Verificar si el usuario existe
         existing_user = await prisma.user.find_unique(where={"id": user_id})
@@ -242,12 +211,9 @@ async def update_user(user_id: int, user: UserBase):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Error updating user: {str(e)}"
         )
-    finally:
-        await prisma.disconnect()
 
 @router.delete("/users/{user_id}", response_model=UserResponse)
 async def delete_user(user_id: int):
-    await prisma.connect()
     try:
         # En lugar de eliminar físicamente, marcamos como eliminado
         deleted_user = await prisma.user.update(
@@ -264,14 +230,11 @@ async def delete_user(user_id: int):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Error deleting user: {str(e)}"
         )
-    finally:
-        await prisma.disconnect()
 
 # ----- OPERACIONES CRUD PARA CURSOS ----- #
 
 @router.post("/courses", response_model=CourseResponse)
 async def create_course(course: CourseBase):
-    await prisma.connect()
     try:
         # Verificar si la categoría existe
         category = await prisma.category.find_unique(where={"id": course.category})
@@ -329,48 +292,37 @@ async def create_course(course: CourseBase):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Error creating course: {str(e)}"
         )
-    finally:
-        await prisma.disconnect()
 
 @router.get("/courses", response_model=List[CourseResponse])
 async def get_courses(
     category: Optional[int] = None,
     visible_only: bool = True
 ):
-    await prisma.connect()
-    try:
-        # Construir condiciones de búsqueda
-        where_conditions = {}
-        if category:
-            where_conditions["category"] = category
-        if visible_only:
-            where_conditions["visible"] = True
-        
-        courses = await prisma.course.find_many(where=where_conditions)
-        
-        return courses
-    finally:
-        await prisma.disconnect()
+    # Construir condiciones de búsqueda
+    where_conditions = {}
+    if category:
+        where_conditions["category"] = category
+    if visible_only:
+        where_conditions["visible"] = True
+    
+    courses = await prisma.course.find_many(where=where_conditions)
+    
+    return courses
 
 @router.get("/courses/{course_id}", response_model=CourseResponse)
 async def get_course(course_id: int):
-    await prisma.connect()
-    try:
-        course = await prisma.course.find_unique(where={"id": course_id})
-        
-        if not course:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Course not found"
-            )
-        
-        return course
-    finally:
-        await prisma.disconnect()
+    course = await prisma.course.find_unique(where={"id": course_id})
+    
+    if not course:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Course not found"
+        )
+    
+    return course
 
 @router.put("/courses/{course_id}", response_model=CourseResponse)
 async def update_course(course_id: int, course: CourseBase):
-    await prisma.connect()
     try:
         # Verificar si el curso existe
         existing_course = await prisma.course.find_unique(where={"id": course_id})
@@ -404,12 +356,9 @@ async def update_course(course_id: int, course: CourseBase):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Error updating course: {str(e)}"
         )
-    finally:
-        await prisma.disconnect()
 
 @router.delete("/courses/{course_id}", response_model=CourseResponse)
 async def delete_course(course_id: int):
-    await prisma.connect()
     try:
         # En lugar de eliminar, hacer que el curso no sea visible
         deleted_course = await prisma.course.update(
@@ -426,14 +375,11 @@ async def delete_course(course_id: int):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Error deleting course: {str(e)}"
         )
-    finally:
-        await prisma.disconnect()
 
 # ----- OPERACIONES CRUD PARA CATEGORÍAS ----- #
 
 @router.post("/categories", response_model=CategoryResponse)
 async def create_category(category: CategoryBase):
-    await prisma.connect()
     try:
         now = datetime.utcnow()
         new_category = await prisma.category.create(
@@ -458,41 +404,30 @@ async def create_category(category: CategoryBase):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Error creating category: {str(e)}"
         )
-    finally:
-        await prisma.disconnect()
 
 @router.get("/categories", response_model=List[CategoryResponse])
 async def get_categories(parent: Optional[int] = None):
-    await prisma.connect()
-    try:
-        if parent is not None:
-            categories = await prisma.category.find_many(where={"parent": parent})
-        else:
-            categories = await prisma.category.find_many()
-        
-        return categories
-    finally:
-        await prisma.disconnect()
+    if parent is not None:
+        categories = await prisma.category.find_many(where={"parent": parent})
+    else:
+        categories = await prisma.category.find_many()
+    
+    return categories
 
 @router.get("/categories/{category_id}", response_model=CategoryResponse)
 async def get_category(category_id: int):
-    await prisma.connect()
-    try:
-        category = await prisma.category.find_unique(where={"id": category_id})
-        
-        if not category:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Category not found"
-            )
-        
-        return category
-    finally:
-        await prisma.disconnect()
+    category = await prisma.category.find_unique(where={"id": category_id})
+    
+    if not category:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Category not found"
+        )
+    
+    return category
 
 @router.put("/categories/{category_id}", response_model=CategoryResponse)
 async def update_category(category_id: int, category: CategoryBase):
-    await prisma.connect()
     try:
         updated_category = await prisma.category.update(
             where={"id": category_id},
@@ -516,12 +451,9 @@ async def update_category(category_id: int, category: CategoryBase):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Error updating category: {str(e)}"
         )
-    finally:
-        await prisma.disconnect()
 
 @router.delete("/categories/{category_id}", response_model=CategoryResponse)
 async def delete_category(category_id: int):
-    await prisma.connect()
     try:
         # Verificar si hay cursos asociados
         category_courses = await prisma.categorycourse.find_many(
@@ -544,8 +476,6 @@ async def delete_category(category_id: int):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Error deleting category: {str(e)}"
         )
-    finally:
-        await prisma.disconnect()
 
 # ----- OPERACIONES CRUD PARA ASSIGNACIONES ----- #
 
@@ -560,7 +490,6 @@ async def create_assignment(
             detail="Course ID in path does not match course ID in assignment data"
         )
     
-    await prisma.connect()
     try:
         # Verificar si el curso existe
         course = await prisma.course.find_unique(where={"id": course_id})
@@ -623,47 +552,36 @@ async def create_assignment(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Error creating assignment: {str(e)}"
         )
-    finally:
-        await prisma.disconnect()
 
 @router.get("/courses/{course_id}/assignments", response_model=List[AssignmentResponse])
 async def get_course_assignments(course_id: int):
-    await prisma.connect()
-    try:
-        # Verificar si el curso existe
-        course = await prisma.course.find_unique(where={"id": course_id})
-        if not course:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Course not found"
-            )
-        
-        # Obtener las tareas del curso
-        assignments = await prisma.assignment.find_many(where={"course": course_id})
-        
-        return assignments
-    finally:
-        await prisma.disconnect()
+    # Verificar si el curso existe
+    course = await prisma.course.find_unique(where={"id": course_id})
+    if not course:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Course not found"
+        )
+    
+    # Obtener las tareas del curso
+    assignments = await prisma.assignment.find_many(where={"course": course_id})
+    
+    return assignments
 
 @router.get("/assignments/{assignment_id}", response_model=AssignmentResponse)
 async def get_assignment(assignment_id: int):
-    await prisma.connect()
-    try:
-        assignment = await prisma.assignment.find_unique(where={"id": assignment_id})
-        
-        if not assignment:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Assignment not found"
-            )
-        
-        return assignment
-    finally:
-        await prisma.disconnect()
+    assignment = await prisma.assignment.find_unique(where={"id": assignment_id})
+    
+    if not assignment:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Assignment not found"
+        )
+    
+    return assignment
 
 @router.put("/assignments/{assignment_id}", response_model=AssignmentResponse)
 async def update_assignment(assignment_id: int, assignment: AssignmentBase):
-    await prisma.connect()
     try:
         updated_assignment = await prisma.assignment.update(
             where={"id": assignment_id},
@@ -703,12 +621,9 @@ async def update_assignment(assignment_id: int, assignment: AssignmentBase):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Error updating assignment: {str(e)}"
         )
-    finally:
-        await prisma.disconnect()
 
 @router.delete("/assignments/{assignment_id}", response_model=AssignmentResponse)
 async def delete_assignment(assignment_id: int):
-    await prisma.connect()
     try:
         # Eliminar las entregas asociadas
         await prisma.submission.delete_many(
@@ -739,8 +654,6 @@ async def delete_assignment(assignment_id: int):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Error deleting assignment: {str(e)}"
         )
-    finally:
-        await prisma.disconnect()
 
 # ----- OPERACIONES CRUD PARA ENTREGAS (SUBMISSIONS) ----- #
 
@@ -752,7 +665,6 @@ async def create_submission(assignment_id: int, submission: SubmissionBase):
             detail="Assignment ID in path does not match assignment ID in submission data"
         )
     
-    await prisma.connect()
     try:
         # Verificar si la tarea existe
         assignment = await prisma.assignment.find_unique(where={"id": assignment_id})
@@ -800,54 +712,43 @@ async def create_submission(assignment_id: int, submission: SubmissionBase):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Error creating submission: {str(e)}"
         )
-    finally:
-        await prisma.disconnect()
 
 @router.get("/assignments/{assignment_id}/submissions", response_model=List[SubmissionResponse])
 async def get_assignment_submissions(assignment_id: int):
-    await prisma.connect()
-    try:
-        # Verificar si la tarea existe
-        assignment = await prisma.assignment.find_unique(where={"id": assignment_id})
-        if not assignment:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Assignment not found"
-            )
-        
-        # Obtener las entregas
-        submissions = await prisma.submission.find_many(
-            where={"assignment": assignment_id}
+    # Verificar si la tarea existe
+    assignment = await prisma.assignment.find_unique(where={"id": assignment_id})
+    if not assignment:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Assignment not found"
         )
-        
-        return submissions
-    finally:
-        await prisma.disconnect()
+    
+    # Obtener las entregas
+    submissions = await prisma.submission.find_many(
+        where={"assignment": assignment_id}
+    )
+    
+    return submissions
 
 @router.get("/users/{user_id}/submissions", response_model=List[SubmissionResponse])
 async def get_user_submissions(user_id: int):
-    await prisma.connect()
-    try:
-        # Verificar si el usuario existe
-        user = await prisma.user.find_unique(where={"id": user_id})
-        if not user:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="User not found"
-            )
-        
-        # Obtener las entregas
-        submissions = await prisma.submission.find_many(
-            where={"userid": user_id}
+    # Verificar si el usuario existe
+    user = await prisma.user.find_unique(where={"id": user_id})
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
         )
-        
-        return submissions
-    finally:
-        await prisma.disconnect()
+    
+    # Obtener las entregas
+    submissions = await prisma.submission.find_many(
+        where={"userid": user_id}
+    )
+    
+    return submissions
 
 @router.put("/submissions/{submission_id}", response_model=SubmissionResponse)
 async def update_submission(submission_id: int, submission: SubmissionBase):
-    await prisma.connect()
     try:
         # Verificar si la entrega existe
         existing_submission = await prisma.submission.find_unique(
@@ -875,12 +776,9 @@ async def update_submission(submission_id: int, submission: SubmissionBase):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Error updating submission: {str(e)}"
         )
-    finally:
-        await prisma.disconnect()
 
 @router.delete("/submissions/{submission_id}", response_model=SubmissionResponse)
 async def delete_submission(submission_id: int):
-    await prisma.connect()
     try:
         deleted_submission = await prisma.submission.delete(
             where={"id": submission_id}
@@ -892,14 +790,11 @@ async def delete_submission(submission_id: int):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Error deleting submission: {str(e)}"
         )
-    finally:
-        await prisma.disconnect()
 
 # ----- OPERACIONES CRUD PARA MATRÍCULAS (ENROLLMENTS) ----- #
 
 @router.post("/enrollments", response_model=EnrollmentResponse)
 async def create_enrollment(enrollment: EnrollmentBase):
-    await prisma.connect()
     try:
         # Verificar si el curso existe
         course = await prisma.course.find_unique(where={"id": enrollment.courseid})
@@ -962,50 +857,39 @@ async def create_enrollment(enrollment: EnrollmentBase):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Error creating enrollment: {str(e)}"
         )
-    finally:
-        await prisma.disconnect()
 
 @router.get("/courses/{course_id}/enrollments", response_model=List[EnrollmentResponse])
 async def get_course_enrollments(course_id: int):
-    await prisma.connect()
-    try:
-        # Verificar si el curso existe
-        course = await prisma.course.find_unique(where={"id": course_id})
-        if not course:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Course not found"
-            )
-        
-        # Obtener las matrículas del curso
-        enrollments = await prisma.enrollment.find_many(where={"courseid": course_id})
-        
-        return enrollments
-    finally:
-        await prisma.disconnect()
+    # Verificar si el curso existe
+    course = await prisma.course.find_unique(where={"id": course_id})
+    if not course:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Course not found"
+        )
+    
+    # Obtener las matrículas del curso
+    enrollments = await prisma.enrollment.find_many(where={"courseid": course_id})
+    
+    return enrollments
 
 @router.get("/users/{user_id}/enrollments", response_model=List[EnrollmentResponse])
 async def get_user_enrollments(user_id: int):
-    await prisma.connect()
-    try:
-        # Verificar si el usuario existe
-        user = await prisma.user.find_unique(where={"id": user_id})
-        if not user:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="User not found"
-            )
-        
-        # Obtener las matrículas del usuario
-        enrollments = await prisma.enrollment.find_many(where={"userid": user_id})
-        
-        return enrollments
-    finally:
-        await prisma.disconnect()
+    # Verificar si el usuario existe
+    user = await prisma.user.find_unique(where={"id": user_id})
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+    
+    # Obtener las matrículas del usuario
+    enrollments = await prisma.enrollment.find_many(where={"userid": user_id})
+    
+    return enrollments
 
 @router.put("/enrollments/{enrollment_id}", response_model=EnrollmentResponse)
 async def update_enrollment(enrollment_id: int, enrollment: EnrollmentBase):
-    await prisma.connect()
     try:
         # Verificar si la matrícula existe
         existing_enrollment = await prisma.enrollment.find_unique(
@@ -1035,12 +919,9 @@ async def update_enrollment(enrollment_id: int, enrollment: EnrollmentBase):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Error updating enrollment: {str(e)}"
         )
-    finally:
-        await prisma.disconnect()
 
 @router.delete("/enrollments/{enrollment_id}", response_model=EnrollmentResponse)
 async def delete_enrollment(enrollment_id: int):
-    await prisma.connect()
     try:
         # Obtener información de la matrícula
         enrollment = await prisma.enrollment.find_unique(
@@ -1072,8 +953,6 @@ async def delete_enrollment(enrollment_id: int):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Error deleting enrollment: {str(e)}"
         )
-    finally:
-        await prisma.disconnect()
 
 # ----- OPERACIONES CRUD PARA FOROS ----- #
 
@@ -1088,7 +967,6 @@ async def create_forum(
             detail="Course ID in path does not match course ID in forum data"
         )
     
-    await prisma.connect()
     try:
         # Verificar si el curso existe
         course = await prisma.course.find_unique(where={"id": course_id})
@@ -1132,47 +1010,36 @@ async def create_forum(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Error creating forum: {str(e)}"
         )
-    finally:
-        await prisma.disconnect()
 
 @router.get("/courses/{course_id}/forums", response_model=List[ForumResponse])
 async def get_course_forums(course_id: int):
-    await prisma.connect()
-    try:
-        # Verificar si el curso existe
-        course = await prisma.course.find_unique(where={"id": course_id})
-        if not course:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Course not found"
-            )
-        
-        # Obtener los foros
-        forums = await prisma.forum.find_many(where={"course": course_id})
-        
-        return forums
-    finally:
-        await prisma.disconnect()
+    # Verificar si el curso existe
+    course = await prisma.course.find_unique(where={"id": course_id})
+    if not course:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Course not found"
+        )
+    
+    # Obtener los foros
+    forums = await prisma.forum.find_many(where={"course": course_id})
+    
+    return forums
 
 @router.get("/forums/{forum_id}", response_model=ForumResponse)
 async def get_forum(forum_id: int):
-    await prisma.connect()
-    try:
-        forum = await prisma.forum.find_unique(where={"id": forum_id})
-        
-        if not forum:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Forum not found"
-            )
-        
-        return forum
-    finally:
-        await prisma.disconnect()
+    forum = await prisma.forum.find_unique(where={"id": forum_id})
+    
+    if not forum:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Forum not found"
+        )
+    
+    return forum
 
 @router.put("/forums/{forum_id}", response_model=ForumResponse)
 async def update_forum(forum_id: int, forum: ForumBase):
-    await prisma.connect()
     try:
         updated_forum = await prisma.forum.update(
             where={"id": forum_id},
@@ -1191,12 +1058,9 @@ async def update_forum(forum_id: int, forum: ForumBase):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Error updating forum: {str(e)}"
         )
-    finally:
-        await prisma.disconnect()
 
 @router.delete("/forums/{forum_id}", response_model=ForumResponse)
 async def delete_forum(forum_id: int):
-    await prisma.connect()
     try:
         # Eliminar discusiones y mensajes asociados
         discussions = await prisma.forumdiscussion.find_many(
@@ -1225,8 +1089,6 @@ async def delete_forum(forum_id: int):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Error deleting forum: {str(e)}"
         )
-    finally:
-        await prisma.disconnect()
 
 # ----- OPERACIONES CRUD PARA DISCUSIONES DEL FORO ----- #
 
@@ -1241,7 +1103,6 @@ async def create_forum_discussion(
             detail="Forum ID in path does not match forum ID in discussion data"
         )
     
-    await prisma.connect()
     try:
         # Verificar si el foro existe
         forum = await prisma.forum.find_unique(where={"id": forum_id})
@@ -1305,51 +1166,40 @@ async def create_forum_discussion(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Error creating discussion: {str(e)}"
         )
-    finally:
-        await prisma.disconnect()
 
 @router.get("/forums/{forum_id}/discussions", response_model=List[ForumDiscussionResponse])
 async def get_forum_discussions(forum_id: int):
-    await prisma.connect()
-    try:
-        # Verificar si el foro existe
-        forum = await prisma.forum.find_unique(where={"id": forum_id})
-        if not forum:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Forum not found"
-            )
-        
-        # Obtener las discusiones
-        discussions = await prisma.forumdiscussion.find_many(
-            where={"forum": forum_id}
+    # Verificar si el foro existe
+    forum = await prisma.forum.find_unique(where={"id": forum_id})
+    if not forum:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Forum not found"
         )
-        
-        return discussions
-    finally:
-        await prisma.disconnect()
+    
+    # Obtener las discusiones
+    discussions = await prisma.forumdiscussion.find_many(
+        where={"forum": forum_id}
+    )
+    
+    return discussions
 
 @router.get("/discussions/{discussion_id}", response_model=ForumDiscussionResponse)
 async def get_discussion(discussion_id: int):
-    await prisma.connect()
-    try:
-        discussion = await prisma.forumdiscussion.find_unique(
-            where={"id": discussion_id}
+    discussion = await prisma.forumdiscussion.find_unique(
+        where={"id": discussion_id}
+    )
+    
+    if not discussion:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Discussion not found"
         )
-        
-        if not discussion:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Discussion not found"
-            )
-        
-        return discussion
-    finally:
-        await prisma.disconnect()
+    
+    return discussion
 
 @router.put("/discussions/{discussion_id}", response_model=ForumDiscussionResponse)
 async def update_discussion(discussion_id: int, discussion: ForumDiscussionBase):
-    await prisma.connect()
     try:
         updated_discussion = await prisma.forumdiscussion.update(
             where={"id": discussion_id},
@@ -1366,12 +1216,9 @@ async def update_discussion(discussion_id: int, discussion: ForumDiscussionBase)
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Error updating discussion: {str(e)}"
         )
-    finally:
-        await prisma.disconnect()
 
 @router.delete("/discussions/{discussion_id}", response_model=ForumDiscussionResponse)
 async def delete_discussion(discussion_id: int):
-    await prisma.connect()
     try:
         # Eliminar mensajes asociados
         await prisma.forumpost.delete_many(
@@ -1389,8 +1236,6 @@ async def delete_discussion(discussion_id: int):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Error deleting discussion: {str(e)}"
         )
-    finally:
-        await prisma.disconnect()
 
 # ----- OPERACIONES CRUD PARA RECURSOS ----- #
 
@@ -1402,7 +1247,6 @@ async def create_resource(course_id: int, resource: ResourceBase):
             detail="Course ID in path does not match course ID in resource data"
         )
     
-    await prisma.connect()
     try:
         # Verificar si el curso existe
         course = await prisma.course.find_unique(where={"id": course_id})
@@ -1435,51 +1279,40 @@ async def create_resource(course_id: int, resource: ResourceBase):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Error creating resource: {str(e)}"
         )
-    finally:
-        await prisma.disconnect()
 
 @router.get("/courses/{course_id}/resources", response_model=List[ResourceResponse])
 async def get_course_resources(course_id: int):
-    await prisma.connect()
-    try:
-        # Verificar si el curso existe
-        course = await prisma.course.find_unique(where={"id": course_id})
-        if not course:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Course not found"
-            )
-        
-        # Obtener los recursos
-        resources = await prisma.resource.find_many(
-            where={"course": course_id}
+    # Verificar si el curso existe
+    course = await prisma.course.find_unique(where={"id": course_id})
+    if not course:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Course not found"
         )
-        
-        return resources
-    finally:
-        await prisma.disconnect()
+    
+    # Obtener los recursos
+    resources = await prisma.resource.find_many(
+        where={"course": course_id}
+    )
+    
+    return resources
 
 @router.get("/resources/{resource_id}", response_model=ResourceResponse)
 async def get_resource(resource_id: int):
-    await prisma.connect()
-    try:
-        resource = await prisma.resource.find_unique(
-            where={"id": resource_id}
+    resource = await prisma.resource.find_unique(
+        where={"id": resource_id}
+    )
+    
+    if not resource:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Resource not found"
         )
-        
-        if not resource:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Resource not found"
-            )
-        
-        return resource
-    finally:
-        await prisma.disconnect()
+    
+    return resource
 
 @router.put("/resources/{resource_id}", response_model=ResourceResponse)
 async def update_resource(resource_id: int, resource: ResourceBase):
-    await prisma.connect()
     try:
         # Incrementar la revisión
         existing_resource = await prisma.resource.find_unique(
@@ -1510,12 +1343,9 @@ async def update_resource(resource_id: int, resource: ResourceBase):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Error updating resource: {str(e)}"
         )
-    finally:
-        await prisma.disconnect()
 
 @router.delete("/resources/{resource_id}", response_model=ResourceResponse)
 async def delete_resource(resource_id: int):
-    await prisma.connect()
     try:
         deleted_resource = await prisma.resource.delete(
             where={"id": resource_id}
@@ -1527,14 +1357,11 @@ async def delete_resource(resource_id: int):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Error deleting resource: {str(e)}"
         )
-    finally:
-        await prisma.disconnect()
 
 # ----- OPERACIONES CRUD PARA CALIFICACIONES ----- #
 
 @router.post("/courses/{course_id}/grades", response_model=GradeResponse)
 async def create_grade(course_id: int, grade: GradeBase):
-    await prisma.connect()
     try:
         # Verificar si el ítem de calificación existe y pertenece al curso
         grade_item = await prisma.gradeitem.find_unique(where={"id": grade.itemid})
@@ -1596,72 +1423,61 @@ async def create_grade(course_id: int, grade: GradeBase):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Error creating grade: {str(e)}"
         )
-    finally:
-        await prisma.disconnect()
 
 @router.get("/courses/{course_id}/grades", response_model=List[GradeItemResponse])
 async def get_course_grade_items(course_id: int):
-    await prisma.connect()
-    try:
-        # Verificar si el curso existe
-        course = await prisma.course.find_unique(where={"id": course_id})
-        if not course:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Course not found"
-            )
-        
-        # Obtener los ítems de calificación del curso
-        grade_items = await prisma.gradeitem.find_many(where={"courseid": course_id})
-        
-        return grade_items
-    finally:
-        await prisma.disconnect()
+    # Verificar si el curso existe
+    course = await prisma.course.find_unique(where={"id": course_id})
+    if not course:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Course not found"
+        )
+    
+    # Obtener los ítems de calificación del curso
+    grade_items = await prisma.gradeitem.find_many(where={"courseid": course_id})
+    
+    return grade_items
 
 @router.get("/courses/{course_id}/user/{user_id}/grades", response_model=List[GradeResponse])
 async def get_user_course_grades(course_id: int, user_id: int):
-    await prisma.connect()
-    try:
-        # Verificar si el curso existe
-        course = await prisma.course.find_unique(where={"id": course_id})
-        if not course:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Course not found"
-            )
-        
-        # Verificar si el usuario existe
-        user = await prisma.user.find_unique(where={"id": user_id})
-        if not user:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="User not found"
-            )
-        
-        # Obtener los ítems de calificación del curso
-        grade_items = await prisma.gradeitem.find_many(where={"courseid": course_id})
-        
-        if not grade_items:
-            return []
-        
-        # Obtener todas las calificaciones del usuario para los ítems del curso
-        item_ids = [item.id for item in grade_items]
-        grades = await prisma.grade.find_many(
-            where={
-                "itemid": {
-                    "in": item_ids
-                },
-                "userid": user_id
-            }
+    # Verificar si el curso existe
+    course = await prisma.course.find_unique(where={"id": course_id})
+    if not course:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Course not found"
         )
-        
-        return grades
-    finally:
-        await prisma.disconnect()
+    
+    # Verificar si el usuario existe
+    user = await prisma.user.find_unique(where={"id": user_id})
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+    
+    # Obtener los ítems de calificación del curso
+    grade_items = await prisma.gradeitem.find_many(where={"courseid": course_id})
+    
+    if not grade_items:
+        return []
+    
+    # Obtener todas las calificaciones del usuario para los ítems del curso
+    item_ids = [item.id for item in grade_items]
+    grades = await prisma.grade.find_many(
+        where={
+            "itemid": {
+                "in": item_ids
+            },
+            "userid": user_id
+        }
+    )
+    
+    return grades
 
 @router.put("/grades/{grade_id}", response_model=GradeResponse)
 async def update_grade(grade_id: int, grade: GradeBase):
-    await prisma.connect()
     try:
         # Verificar si la calificación existe
         existing_grade = await prisma.grade.find_unique(
@@ -1691,12 +1507,9 @@ async def update_grade(grade_id: int, grade: GradeBase):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Error updating grade: {str(e)}"
         )
-    finally:
-        await prisma.disconnect()
 
 @router.delete("/grades/{grade_id}", response_model=GradeResponse)
 async def delete_grade(grade_id: int):
-    await prisma.connect()
     try:
         deleted_grade = await prisma.grade.delete(
             where={"id": grade_id}
@@ -1708,5 +1521,3 @@ async def delete_grade(grade_id: int):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Error deleting grade: {str(e)}"
         )
-    finally:
-        await prisma.disconnect()

@@ -1,5 +1,4 @@
 import strawberry
-from prisma import Prisma
 from strawberry.fastapi import GraphQLRouter
 from fastapi import FastAPI, HTTPException
 import uvicorn
@@ -7,7 +6,7 @@ from datetime import datetime
 from typing import List, Optional
 import bcrypt
 from bcrypt import checkpw, gensalt, hashpw
-prisma = Prisma()
+from db import prisma_client
 
 # User Types
 @strawberry.type
@@ -255,58 +254,53 @@ class EnrollmentInput:
 class Query:
     # User Queries
     @strawberry.field
-    async def users(self) -> List[User]:
-        await prisma.connect()
-        users = await prisma.user.find_many()
-        await prisma.disconnect()
+    async def users(self) -> List[User]:       
+        users = await prisma_client.user.find_many()       
         return users
 
     @strawberry.field
     async def user(self, user_id: int) -> User:
-        await prisma.connect()
-        user = await prisma.user.find_unique(where={"id": user_id})
-        await prisma.disconnect()
+        
+        user = await prisma_client.user.find_unique(where={"id": user_id})       
         if not user:
             raise Exception("User not found")
         return user
 
     # Course Queries
     @strawberry.field
-    async def courses(self) -> List[Course]:
-        await prisma.connect()
-        courses = await prisma.course.find_many()
-        await prisma.disconnect()
+    async def courses(self) -> List[Course]:        
+        courses = await prisma_client.course.find_many()       
         return courses
 
     @strawberry.field
     async def course(self, course_id: int) -> Course:
-        await prisma.connect()
-        course = await prisma.course.find_unique(where={"id": course_id})
-        await prisma.disconnect()
+        
+        course = await prisma_client.course.find_unique(where={"id": course_id})
+        
         if not course:
             raise Exception("Course not found")
         return course
 
     @strawberry.field
     async def course_sections(self, course_id: int) -> List[CourseSection]:
-        await prisma.connect()
-        sections = await prisma.coursesection.find_many(where={"course": course_id})
-        await prisma.disconnect()
+        
+        sections = await prisma_client.coursesection.find_many(where={"course": course_id})
+        
         return sections
 
     # Category Queries
     @strawberry.field
     async def categories(self) -> List[Category]:
-        await prisma.connect()
-        categories = await prisma.category.find_many()
-        await prisma.disconnect()
+        
+        categories = await prisma_client.category.find_many()
+        
         return categories
 
     @strawberry.field
     async def category(self, category_id: int) -> Category:
-        await prisma.connect()
-        category = await prisma.category.find_unique(where={"id": category_id})
-        await prisma.disconnect()
+        
+        category = await prisma_client.category.find_unique(where={"id": category_id})
+        
         if not category:
             raise Exception("Category not found")
         return category
@@ -314,16 +308,16 @@ class Query:
     # Role Queries
     @strawberry.field
     async def roles(self) -> List[Role]:
-        await prisma.connect()
-        roles = await prisma.role.find_many()
-        await prisma.disconnect()
+        
+        roles = await prisma_client.role.find_many()
+        
         return roles
 
     @strawberry.field
     async def role(self, role_id: int) -> Role:
-        await prisma.connect()
-        role = await prisma.role.find_unique(where={"id": role_id})
-        await prisma.disconnect()
+        
+        role = await prisma_client.role.find_unique(where={"id": role_id})
+        
         if not role:
             raise Exception("Role not found")
         return role
@@ -331,19 +325,19 @@ class Query:
     # Assignment Queries
     @strawberry.field
     async def assignments(self, course_id: Optional[int] = None) -> List[Assignment]:
-        await prisma.connect()
+        
         if course_id:
-            assignments = await prisma.assignment.find_many(where={"course": course_id})
+            assignments = await prisma_client.assignment.find_many(where={"course": course_id})
         else:
-            assignments = await prisma.assignment.find_many()
-        await prisma.disconnect()
+            assignments = await prisma_client.assignment.find_many()
+        
         return assignments
 
     @strawberry.field
     async def assignment(self, assignment_id: int) -> Assignment:
-        await prisma.connect()
-        assignment = await prisma.assignment.find_unique(where={"id": assignment_id})
-        await prisma.disconnect()
+        
+        assignment = await prisma_client.assignment.find_unique(where={"id": assignment_id})
+        
         if not assignment:
             raise Exception("Assignment not found")
         return assignment
@@ -351,85 +345,85 @@ class Query:
     # Submission Queries
     @strawberry.field
     async def submissions(self, assignment_id: int) -> List[Submission]:
-        await prisma.connect()
-        submissions = await prisma.submission.find_many(where={"assignment": assignment_id})
-        await prisma.disconnect()
+        
+        submissions = await prisma_client.submission.find_many(where={"assignment": assignment_id})
+        
         return submissions
 
     @strawberry.field
     async def user_submissions(self, user_id: int) -> List[Submission]:
-        await prisma.connect()
-        submissions = await prisma.submission.find_many(where={"userid": user_id})
-        await prisma.disconnect()
+        
+        submissions = await prisma_client.submission.find_many(where={"userid": user_id})
+        
         return submissions
 
     # Forum Queries
     @strawberry.field
     async def forums(self, course_id: Optional[int] = None) -> List[Forum]:
-        await prisma.connect()
+        
         if course_id:
-            forums = await prisma.forum.find_many(where={"course": course_id})
+            forums = await prisma_client.forum.find_many(where={"course": course_id})
         else:
-            forums = await prisma.forum.find_many()
-        await prisma.disconnect()
+            forums = await prisma_client.forum.find_many()
+        
         return forums
 
     @strawberry.field
     async def forum_discussions(self, forum_id: int) -> List[ForumDiscussion]:
-        await prisma.connect()
-        discussions = await prisma.forumdiscussion.find_many(where={"forum": forum_id})
-        await prisma.disconnect()
+        
+        discussions = await prisma_client.forumdiscussion.find_many(where={"forum": forum_id})
+        
         return discussions
 
     @strawberry.field
     async def forum_posts(self, discussion_id: int) -> List[ForumPost]:
-        await prisma.connect()
-        posts = await prisma.forumpost.find_many(where={"discussion": discussion_id})
-        await prisma.disconnect()
+        
+        posts = await prisma_client.forumpost.find_many(where={"discussion": discussion_id})
+        
         return posts
 
     # Grade Queries
     @strawberry.field
     async def course_grades(self, course_id: int) -> List[GradeItem]:
-        await prisma.connect()
-        grade_items = await prisma.gradeitem.find_many(where={"courseid": course_id})
-        await prisma.disconnect()
+        
+        grade_items = await prisma_client.gradeitem.find_many(where={"courseid": course_id})
+        
         return grade_items
 
     @strawberry.field
     async def user_grades(self, user_id: int) -> List[Grade]:
-        await prisma.connect()
-        grades = await prisma.grade.find_many(where={"userid": user_id})
-        await prisma.disconnect()
+        
+        grades = await prisma_client.grade.find_many(where={"userid": user_id})
+        
         return grades
 
     # Enrollment Queries
     @strawberry.field
     async def course_enrollments(self, course_id: int) -> List[Enrollment]:
-        await prisma.connect()
-        enrollments = await prisma.enrollment.find_many(where={"courseid": course_id})
-        await prisma.disconnect()
+        
+        enrollments = await prisma_client.enrollment.find_many(where={"courseid": course_id})
+        
         return enrollments
 
     @strawberry.field
     async def user_enrollments(self, user_id: int) -> List[Enrollment]:
-        await prisma.connect()
-        enrollments = await prisma.enrollment.find_many(where={"userid": user_id}, include={"course": True})
-        await prisma.disconnect()
+        
+        enrollments = await prisma_client.enrollment.find_many(where={"userid": user_id}, include={"course": True})
+        
         return enrollments
 
     @strawberry.field
     async def course_completions(self, course_id: int) -> List[CourseCompletion]:
-        await prisma.connect()
-        completions = await prisma.coursecompletion.find_many(where={"course": course_id})
-        await prisma.disconnect()
+        
+        completions = await prisma_client.coursecompletion.find_many(where={"course": course_id})
+        
         return completions
 
     @strawberry.field
     async def user_completions(self, user_id: int) -> List[CourseCompletion]:
-        await prisma.connect()
-        completions = await prisma.coursecompletion.find_many(where={"userid": user_id})
-        await prisma.disconnect()
+        
+        completions = await prisma_client.coursecompletion.find_many(where={"userid": user_id})
+        
         return completions
 
 # Mutation Type
@@ -438,8 +432,8 @@ class Mutation:
     # Role Mutations
     @strawberry.mutation
     async def create_role(self, input: RoleInput) -> Role:
-        await prisma.connect()
-        new_role = await prisma.role.create(
+        
+        new_role = await prisma_client.role.create(
             data={
                 "name": input.name,
                 "shortname": input.shortname,
@@ -448,7 +442,7 @@ class Mutation:
                 "archetype": input.archetype
             }
         )
-        await prisma.disconnect()
+        
         return new_role
 
     @strawberry.mutation
@@ -457,8 +451,8 @@ class Mutation:
         role_id: int,
         input: RoleInput
     ) -> Role:
-        await prisma.connect()
-        updated_role = await prisma.role.update(
+        
+        updated_role = await prisma_client.role.update(
             where={"id": role_id},
             data={
                 "name": input.name,
@@ -468,16 +462,16 @@ class Mutation:
                 "archetype": input.archetype
             }
         )
-        await prisma.disconnect()
+        
         if not updated_role:
             raise Exception("Role not found")
         return updated_role
 
     @strawberry.mutation
     async def delete_role(self, role_id: int) -> Role:
-        await prisma.connect()
-        deleted_role = await prisma.role.delete(where={"id": role_id})
-        await prisma.disconnect()
+        
+        deleted_role = await prisma_client.role.delete(where={"id": role_id})
+        
         if not deleted_role:
             raise Exception("Role not found")
         return deleted_role
@@ -485,9 +479,9 @@ class Mutation:
     # User Mutations
     @strawberry.mutation
     async def create_user(self, input: UserInput) -> User:
-        await prisma.connect()
+        
         now = datetime.utcnow()
-        new_user = await prisma.user.create(
+        new_user = await prisma_client.user.create(
             data={
                 "username": input.username,
                 "password": input.password,  # In production, this should be hashed
@@ -500,7 +494,7 @@ class Mutation:
                 "timemodified": now,
             }
         )
-        await prisma.disconnect()
+        
         return new_user
 
     @strawberry.mutation
@@ -509,8 +503,8 @@ class Mutation:
         user_id: int,
         input: UserInput
     ) -> User:
-        await prisma.connect()
-        updated_user = await prisma.user.update(
+        
+        updated_user = await prisma_client.user.update(
             where={"id": user_id},
             data={
                 "username": input.username,
@@ -523,7 +517,7 @@ class Mutation:
                 "timemodified": datetime.utcnow(),
             }
         )
-        await prisma.disconnect()
+        
         if not updated_user:
             raise Exception("User not found")
         return updated_user
@@ -531,9 +525,9 @@ class Mutation:
     # Course Mutations
     @strawberry.mutation
     async def create_course(self, input: CourseInput) -> Course:
-        await prisma.connect()
+        
         now = datetime.utcnow()
-        new_course = await prisma.course.create(
+        new_course = await prisma_client.course.create(
             data={
                 "category": input.category,
                 "sortorder": input.sortorder,
@@ -549,7 +543,7 @@ class Mutation:
                 "timemodified": now,
             }
         )
-        await prisma.disconnect()
+        
         return new_course
 
     @strawberry.mutation
@@ -558,8 +552,8 @@ class Mutation:
         course_id: int,
         input: CourseInput
     ) -> Course:
-        await prisma.connect()
-        updated_course = await prisma.course.update(
+        
+        updated_course = await prisma_client.course.update(
             where={"id": course_id},
             data={
                 "category": input.category,
@@ -575,7 +569,7 @@ class Mutation:
                 "timemodified": datetime.utcnow(),
             }
         )
-        await prisma.disconnect()
+        
         if not updated_course:
             raise Exception("Course not found")
         return updated_course
@@ -583,9 +577,9 @@ class Mutation:
     # Assignment Mutations
     @strawberry.mutation
     async def create_assignment(self, input: AssignmentInput) -> Assignment:
-        await prisma.connect()
+        
         now = datetime.utcnow()
-        new_assignment = await prisma.assignment.create(
+        new_assignment = await prisma_client.assignment.create(
             data={
                 "course": input.course,
                 "name": input.name,
@@ -597,7 +591,7 @@ class Mutation:
                 "introformat": 1,  # Default format
             }
         )
-        await prisma.disconnect()
+        
         return new_assignment
 
     @strawberry.mutation
@@ -606,8 +600,8 @@ class Mutation:
         assignment_id: int,
         input: AssignmentInput
     ) -> Assignment:
-        await prisma.connect()
-        updated_assignment = await prisma.assignment.update(
+        
+        updated_assignment = await prisma_client.assignment.update(
             where={"id": assignment_id},
             data={
                 "course": input.course,
@@ -619,7 +613,7 @@ class Mutation:
                 "timemodified": datetime.utcnow(),
             }
         )
-        await prisma.disconnect()
+        
         if not updated_assignment:
             raise Exception("Assignment not found")
         return updated_assignment
@@ -627,9 +621,9 @@ class Mutation:
     # Enrollment Mutations
     @strawberry.mutation
     async def create_enrollment(self, input: EnrollmentInput) -> Enrollment:
-        await prisma.connect()
+        
         now = datetime.utcnow()
-        new_enrollment = await prisma.enrollment.create(
+        new_enrollment = await prisma_client.enrollment.create(
             data={
                 "enrolid": input.enrolid,
                 "userid": input.userid,
@@ -641,7 +635,7 @@ class Mutation:
                 "timemodified": now,
             }
         )
-        await prisma.disconnect()
+        
         return new_enrollment
 
     @strawberry.mutation
@@ -650,8 +644,8 @@ class Mutation:
         enrollment_id: int,
         input: EnrollmentInput
     ) -> Enrollment:
-        await prisma.connect()
-        updated_enrollment = await prisma.enrollment.update(
+        
+        updated_enrollment = await prisma_client.enrollment.update(
             where={"id": enrollment_id},
             data={
                 "enrolid": input.enrolid,
@@ -661,16 +655,16 @@ class Mutation:
                 "timemodified": datetime.utcnow(),
             }
         )
-        await prisma.disconnect()
+        
         if not updated_enrollment:
             raise Exception("Enrollment not found")
         return updated_enrollment
 
     @strawberry.mutation
     async def delete_enrollment(self, enrollment_id: int) -> Enrollment:
-        await prisma.connect()
-        deleted_enrollment = await prisma.enrollment.delete(where={"id": enrollment_id})
-        await prisma.disconnect()
+        
+        deleted_enrollment = await prisma_client.enrollment.delete(where={"id": enrollment_id})
+        
         if not deleted_enrollment:
             raise Exception("Enrollment not found")
         return deleted_enrollment
@@ -678,9 +672,9 @@ class Mutation:
 # Mutación de login sin tokens
     @strawberry.mutation
     async def login(self, email: str, password: str) -> User:
-        await prisma.connect()
-        user = await prisma.user.find_unique(where={"email": email})
-        await prisma.disconnect()
+        
+        user = await prisma_client.user.find_unique(where={"email": email})
+        
 
         # Verificar si el usuario existe
         if not user:
@@ -709,20 +703,20 @@ class Mutation:
     # Mutación para cambiar la contraseña
     @strawberry.mutation
     async def change_password(self, email: str, new_password: str) -> User:
-        await prisma.connect()
-        user = await prisma.user.find_unique(where={"email": email})
+        
+        user = await prisma_client.user.find_unique(where={"email": email})
 
         if not user:
-            await prisma.disconnect()
+            
             raise HTTPException(status_code=404, detail="Usuario no encontrado")
 
         hashed_new_password = bcrypt.hashpw(new_password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
 
-        updated_user = await prisma.user.update(
+        updated_user = await prisma_client.user.update(
             where={"email": email},
             data={"password": hashed_new_password, "timemodified": datetime.utcnow()}
         )
-        await prisma.disconnect()
+        
         return updated_user
 
 # Create schema
