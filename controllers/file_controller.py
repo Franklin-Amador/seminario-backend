@@ -1,11 +1,11 @@
 from fastapi import APIRouter, HTTPException, UploadFile, File, Form, status
 from fastapi.responses import FileResponse
-from prisma import Prisma
 from typing import Optional, List
 import os
 import shutil
 from datetime import datetime
 import uuid
+from db import prisma_client as prisma
 
 # Configurar la ruta para almacenar archivos
 UPLOAD_DIR = "uploads"
@@ -21,7 +21,6 @@ for directory in [ASSIGNMENT_DIR, RESOURCE_DIR, PROFILE_DIR]:
     if not os.path.exists(directory):
         os.makedirs(directory)
 
-prisma = Prisma()
 
 # Router para manejo de archivos
 router = APIRouter(
@@ -38,16 +37,13 @@ async def upload_assignment_file(
     file: UploadFile = File(...),
 ):
     # Verificar si la tarea existe
-    await prisma.connect()
     assignment = await prisma.assignment.find_unique(where={"id": assignment_id})
     if not assignment:
-        await prisma.disconnect()
         raise HTTPException(status_code=404, detail="Assignment not found")
     
     # Verificar si el usuario existe
     user = await prisma.user.find_unique(where={"id": user_id})
     if not user:
-        await prisma.disconnect()
         raise HTTPException(status_code=404, detail="User not found")
         
     # Verificar si el usuario está matriculado en el curso
@@ -59,7 +55,6 @@ async def upload_assignment_file(
         }
     )
     if not enrollment:
-        await prisma.disconnect()
         raise HTTPException(status_code=403, detail="User not enrolled in this course")
     
     # Crear un nombre único para el archivo
@@ -111,7 +106,6 @@ async def upload_assignment_file(
     
     # Crear la nueva entrega
     new_submission = await prisma.submission.create(data=submission_data)
-    await prisma.disconnect()
     
     return {
         "filename": file.filename,
@@ -127,12 +121,9 @@ async def download_assignment_file(
     submission_id: int,
     user_id: int = None
 ):
-    await prisma.connect()
-    
     # Verificar si la entrega existe
     submission = await prisma.submission.find_unique(where={"id": submission_id})
     if not submission or submission.assignment != assignment_id:
-        await prisma.disconnect()
         raise HTTPException(status_code=404, detail="Submission not found")
     
     # Verificar permisos si se proporciona user_id
@@ -140,7 +131,6 @@ async def download_assignment_file(
         # Verificar si el usuario es un profesor
         assignment = await prisma.assignment.find_unique(where={"id": assignment_id})
         if not assignment:
-            await prisma.disconnect()
             raise HTTPException(status_code=404, detail="Assignment not found")
         
         # Obtener roles del usuario en el contexto del curso
@@ -160,10 +150,7 @@ async def download_assignment_file(
                 break
         
         if not is_teacher:
-            await prisma.disconnect()
             raise HTTPException(status_code=403, detail="Not authorized to access this submission")
-    
-    await prisma.disconnect()
     
     # Buscar el archivo en el directorio
     submission_dir = os.path.join(ASSIGNMENT_DIR, str(assignment_id), str(submission.userid))
@@ -191,18 +178,14 @@ async def upload_resource_file(
     name: str = Form(...),
     description: Optional[str] = Form(None)
 ):
-    await prisma.connect()
-    
     # Verificar si el curso existe
     course = await prisma.course.find_unique(where={"id": course_id})
     if not course:
-        await prisma.disconnect()
         raise HTTPException(status_code=404, detail="Course not found")
     
     # Verificar si el usuario existe
     user = await prisma.user.find_unique(where={"id": user_id})
     if not user:
-        await prisma.disconnect()
         raise HTTPException(status_code=404, detail="User not found")
     
     # Verificar si el usuario tiene permisos para subir recursos
@@ -222,7 +205,6 @@ async def upload_resource_file(
             break
     
     if not is_teacher:
-        await prisma.disconnect()
         raise HTTPException(status_code=403, detail="Not authorized to upload resources")
     
     # Crear un nombre único para el archivo
@@ -248,7 +230,6 @@ async def upload_resource_file(
         "introformat": 1,  # Formato básico
         "timemodified": now
     })
-    await prisma.disconnect()
     
     return {
         "resource_id": new_resource.id,
@@ -260,15 +241,10 @@ async def upload_resource_file(
 # Endpoint para descargar recursos del curso
 @router.get("/resource/{resource_id}")
 async def download_resource_file(resource_id: int):
-    await prisma.connect()
-    
     # Verificar si el recurso existe
     resource = await prisma.resource.find_unique(where={"id": resource_id})
     if not resource:
-        await prisma.disconnect()
         raise HTTPException(status_code=404, detail="Resource not found")
-    
-    await prisma.disconnect()
     
     # Buscar el archivo en el directorio
     resource_dir = os.path.join(RESOURCE_DIR, str(resource.course))
@@ -300,12 +276,9 @@ async def upload_profile_image(
         raise HTTPException(status_code=400, detail="Invalid file type. Only images are allowed.")
     
     # Verificar si el usuario existe
-    await prisma.connect()
     user = await prisma.user.find_unique(where={"id": user_id})
     if not user:
-        await prisma.disconnect()
         raise HTTPException(status_code=404, detail="User not found")
-    await prisma.disconnect()
     
     # Crear un nombre único para el archivo
     file_extension = os.path.splitext(file.filename)[1]
@@ -329,12 +302,9 @@ async def upload_profile_image(
 @router.get("/profile/{user_id}")
 async def get_profile_image(user_id: int):
     # Verificar si el usuario existe
-    await prisma.connect()
     user = await prisma.user.find_unique(where={"id": user_id})
     if not user:
-        await prisma.disconnect()
         raise HTTPException(status_code=404, detail="User not found")
-    await prisma.disconnect()
     
     # Buscar archivo de perfil del usuario
     user_profile_dir = os.path.join(PROFILE_DIR, str(user_id))
