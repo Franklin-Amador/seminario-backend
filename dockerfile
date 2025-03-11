@@ -32,5 +32,6 @@ RUN cd prisma && prisma generate
 # Exponer el puerto donde correrá la aplicación
 EXPOSE 8000
 
-# Comando para iniciar la aplicación
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Comando para iniciar la aplicación con múltiples workers
+# Calculamos automáticamente el número óptimo de workers basado en los núcleos disponibles
+CMD python -c "import multiprocessing; workers = multiprocessing.cpu_count() * 2 + 1; import os; os.system(f'uvicorn main:app --host 0.0.0.0 --port 8000 --workers {workers}')"
