@@ -1,14 +1,16 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from prisma import Prisma
+
 from strawberry.asgi import GraphQL
 from schema import schema
 from controllers.file_controller import router as file_router
 from controllers.rest_controller import router as rest_router
 from controllers.login_controller import router as login_router
+from db import prisma_client
+
 
 app = FastAPI(title="Campus Virtual API", description="Backend API para Campus Virtual")
-prisma = Prisma()
+
 
 # Configurar CORS
 origins = [
@@ -48,20 +50,18 @@ def read_root():
 # Conectar a la base de datos al iniciar
 @app.on_event("startup")
 async def startup():
-    await prisma.connect()
+    await prisma_client.connect()
 
 # Desconectar de la base de datos al cerrar
 @app.on_event("shutdown")
 async def shutdown():
-    await prisma.disconnect()
+    await prisma_client.disconnect()
 
 @app.get("/healthcheck")
 async def healthcheck():
     try:
-        # Verificar conexión a la base de datos
-        await prisma.connect()
-        await prisma.role.count()
-        await prisma.disconnect()
+        # Verificar conexión a la base de datos     
+        await prisma_client.role.count()
         return {"status": "ok", "message": "API y base de datos funcionando correctamente"}
     except Exception as e:
         raise HTTPException(

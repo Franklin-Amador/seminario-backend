@@ -6,3 +6,4 @@ python-multipart==0.0.9
 pydantic==2.6.1
 email-validator==2.1.0
 bcrypt==4.3.0
+locust==2.33.1
