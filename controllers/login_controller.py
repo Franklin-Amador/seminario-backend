@@ -92,7 +92,6 @@ async def update_password(update_data: UpdatePasswordRequest):
     )   
     # Verificar si el usuario existe
     if not user:
-        await prisma_client.disconnect()
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Usuario no encontrado"
@@ -122,9 +121,7 @@ async def reset_all_passwords(update_data: BulkPasswordUpdateRequest):
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Clave de administrador incorrecta"
         )
-    
-    await prisma_client.connect()
-    
+     
     try:
         # Obtener todos los usuarios
         users = await prisma_client.user.find_many()
