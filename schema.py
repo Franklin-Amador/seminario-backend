@@ -311,6 +311,8 @@ class Query:
         
         roles = await prisma_client.role.find_many()
         
+        if not roles:
+            raise Exception("Roles not found")
         return roles
 
     @strawberry.field
