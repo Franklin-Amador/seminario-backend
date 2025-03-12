@@ -19,9 +19,6 @@ class WebsiteUser(HttpUser):
         self.client.get("/api/roles")
         self.client.get("/api/users")
         
-    @task
-    def profile(self):
-        self.client.get("/healthcheck")
         
 
     
