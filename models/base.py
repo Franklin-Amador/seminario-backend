@@ -238,3 +238,19 @@ class ResourceResponse(ResourceBase):
     
     class Config:
         from_attributes = True
+        
+class SectionBase(BaseModel):
+    course: int
+    # section:int
+    name: str
+    summary: Optional[str] = None
+    sequence: Optional[str] = None
+    visible: bool = True
+    # timemodied: Optional[datetime] = None
+    
+class SectionResponse(SectionBase):
+    id: int
+    timemodified: datetime
+    
+    class Config:
+        from_attributes = True

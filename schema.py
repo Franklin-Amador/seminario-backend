@@ -112,6 +112,17 @@ class Assignment:
     allowsubmissionsfromdate: Optional[datetime]
     grade: Optional[int]
     timemodified: datetime
+    
+@strawberry.type
+class Section:
+    id: int
+    course: int
+    section: int
+    name: str
+    summary: Optional[str]
+    sequence: Optional[str]
+    visible: bool
+    timemodified: datetime
 
 @strawberry.type
 class Submission:
@@ -235,6 +246,7 @@ class CourseInput:
 @strawberry.input
 class AssignmentInput:
     course: int
+    section:int
     name: str
     intro: str
     duedate: Optional[datetime] = None
@@ -249,6 +261,14 @@ class EnrollmentInput:
     status: int = 0
     timestart: Optional[datetime] = None
     timeend: Optional[datetime] = None
+    
+@strawberry.input
+class SectionInput:
+    course: int
+    name: Optional[str]
+    summary: Optional[str] = None
+    sequence: Optional[str] = None
+    visible: bool = True
 
 # Query Type
 @strawberry.type
@@ -260,8 +280,7 @@ class Query:
         return users
 
     @strawberry.field
-    async def user(self, user_id: int) -> User:
-        
+    async def user(self, user_id: int) -> User:      
         user = await prisma_client.user.find_unique(where={"id": user_id})       
         if not user:
             raise Exception("User not found")
@@ -274,8 +293,7 @@ class Query:
         return courses
 
     @strawberry.field
-    async def course(self, course_id: int) -> Course:
-        
+    async def course(self, course_id: int) -> Course:        
         course = await prisma_client.course.find_unique(where={"id": course_id})
         
         if not course:
@@ -283,23 +301,18 @@ class Query:
         return course
 
     @strawberry.field
-    async def course_sections(self, course_id: int) -> List[CourseSection]:
-        
-        sections = await prisma_client.coursesection.find_many(where={"course": course_id})
-        
+    async def course_sections(self, course_id: int) -> List[CourseSection]:        
+        sections = await prisma_client.coursesection.find_many(where={"course": course_id})        
         return sections
 
     # Category Queries
     @strawberry.field
-    async def categories(self) -> List[Category]:
-        
-        categories = await prisma_client.category.find_many()
-        
+    async def categories(self) -> List[Category]:        
+        categories = await prisma_client.category.find_many()       
         return categories
 
     @strawberry.field
-    async def category(self, category_id: int) -> Category:
-        
+    async def category(self, category_id: int) -> Category:       
         category = await prisma_client.category.find_unique(where={"id": category_id})
         
         if not category:
@@ -308,8 +321,7 @@ class Query:
 
     # Role Queries
     @strawberry.field
-    async def roles(self) -> List[Role]:
-        
+    async def roles(self) -> List[Role]:        
         roles = await prisma_client.role.find_many()
         
         if not roles:
@@ -317,117 +329,94 @@ class Query:
         return roles
 
     @strawberry.field
-    async def role(self, role_id: int) -> Role:
-        
-        role = await prisma_client.role.find_unique(where={"id": role_id})
-        
+    async def role(self, role_id: int) -> Role:       
+        role = await prisma_client.role.find_unique(where={"id": role_id})        
         if not role:
             raise Exception("Role not found")
         return role
 
     # Assignment Queries
     @strawberry.field
-    async def assignments(self, course_id: Optional[int] = None, section_id: Optional[int] = None) -> List[Assignment]:
-        
+    async def assignments(self, course_id: Optional[int] = None, section_id: Optional[int] = None) -> List[Assignment]:       
         if course_id and section_id:
             assignments = await prisma_client.assignment.find_many(where={"course": course_id, "section": section_id})
         else:
-            assignments = await prisma_client.assignment.find_many()
-        
+            assignments = await prisma_client.assignment.find_many()      
         return assignments
 
     @strawberry.field
-    async def assignment(self, assignment_id: int) -> Assignment:
-        
-        assignment = await prisma_client.assignment.find_unique(where={"id": assignment_id})
-        
+    async def assignment(self, assignment_id: int) -> Assignment:       
+        assignment = await prisma_client.assignment.find_unique(where={"id": assignment_id})      
         if not assignment:
             raise Exception("Assignment not found")
         return assignment
 
     # Submission Queries
     @strawberry.field
-    async def submissions(self, assignment_id: int) -> List[Submission]:
-        
-        submissions = await prisma_client.submission.find_many(where={"assignment": assignment_id})
-        
+    async def submissions(self, assignment_id: int) -> List[Submission]:      
+        submissions = await prisma_client.submission.find_many(where={"assignment": assignment_id})      
         return submissions
 
     @strawberry.field
-    async def user_submissions(self, user_id: int) -> List[Submission]:
-        
-        submissions = await prisma_client.submission.find_many(where={"userid": user_id})
-        
+    async def user_submissions(self, user_id: int) -> List[Submission]:      
+        submissions = await prisma_client.submission.find_many(where={"userid": user_id})      
         return submissions
 
     # Forum Queries
     @strawberry.field
-    async def forums(self, course_id: Optional[int] = None) -> List[Forum]:
-        
+    async def forums(self, course_id: Optional[int] = None) -> List[Forum]:       
         if course_id:
             forums = await prisma_client.forum.find_many(where={"course": course_id})
         else:
-            forums = await prisma_client.forum.find_many()
-        
+            forums = await prisma_client.forum.find_many()       
         return forums
 
     @strawberry.field
-    async def forum_discussions(self, forum_id: int) -> List[ForumDiscussion]:
-        
-        discussions = await prisma_client.forumdiscussion.find_many(where={"forum": forum_id})
-        
+    async def forum_discussions(self, forum_id: int) -> List[ForumDiscussion]:      
+        discussions = await prisma_client.forumdiscussion.find_many(where={"forum": forum_id})       
         return discussions
 
     @strawberry.field
-    async def forum_posts(self, discussion_id: int) -> List[ForumPost]:
-        
-        posts = await prisma_client.forumpost.find_many(where={"discussion": discussion_id})
-        
+    async def forum_posts(self, discussion_id: int) -> List[ForumPost]:       
+        posts = await prisma_client.forumpost.find_many(where={"discussion": discussion_id})       
         return posts
 
     # Grade Queries
     @strawberry.field
-    async def course_grades(self, course_id: int) -> List[GradeItem]:
-        
-        grade_items = await prisma_client.gradeitem.find_many(where={"courseid": course_id})
-        
+    async def course_grades(self, course_id: int) -> List[GradeItem]:      
+        grade_items = await prisma_client.gradeitem.find_many(where={"courseid": course_id})       
         return grade_items
 
     @strawberry.field
-    async def user_grades(self, user_id: int) -> List[Grade]:
-        
-        grades = await prisma_client.grade.find_many(where={"userid": user_id})
-        
+    async def user_grades(self, user_id: int) -> List[Grade]:      
+        grades = await prisma_client.grade.find_many(where={"userid": user_id})  
         return grades
 
     # Enrollment Queries
     @strawberry.field
     async def course_enrollments(self, course_id: int) -> List[Enrollment]:
-        
         enrollments = await prisma_client.enrollment.find_many(where={"courseid": course_id})
-        
         return enrollments
 
     @strawberry.field
     async def user_enrollments(self, user_id: int) -> List[Enrollment]:
-        
-        enrollments = await prisma_client.enrollment.find_many(where={"userid": user_id}, include={"course": True})
-        
+        enrollments = await prisma_client.enrollment.find_many(where={"userid": user_id}, include={"course": True})   
         return enrollments
 
     @strawberry.field
     async def course_completions(self, course_id: int) -> List[CourseCompletion]:
-        
         completions = await prisma_client.coursecompletion.find_many(where={"course": course_id})
-        
         return completions
 
     @strawberry.field
     async def user_completions(self, user_id: int) -> List[CourseCompletion]:
-        
         completions = await prisma_client.coursecompletion.find_many(where={"userid": user_id})
-        
         return completions
+    
+    @strawberry.field
+    async def sections(self, course_id: int) -> List[Section]:
+        sections = await prisma_client.coursesection.find_many(where={"course": course_id})
+        return sections
 
 # Mutation Type
 @strawberry.type
@@ -608,7 +597,7 @@ class Mutation:
         updated_assignment = await prisma_client.assignment.update(
             where={"id": assignment_id},
             data={
-                "course": input.course,
+                "section": input.section,
                 "name": input.name,
                 "intro": input.intro,
                 "duedate": input.duedate,
@@ -722,6 +711,54 @@ class Mutation:
         )
         
         return updated_user
+     
+     
+    # Section Mutations
+    @strawberry.mutation
+    async def create_section(self, input: SectionInput) -> Section:
+        now = datetime.utcnow()
+        
+        # Obtener el número de secciones actuales del curso
+        section_count = await prisma_client.coursesection.count(where={"course": input.course})
+        
+        # Asignar el número de sección automáticamente
+        new_section_number = section_count + 1
+        
+        new_section = await prisma_client.coursesection.create(
+            data={
+                "course": input.course,
+                "section": new_section_number,
+                "name": input.name,
+                "summary": input.summary,
+                "sequence": input.sequence,
+                "visible": input.visible,
+                "timemodified": now,
+            }
+        )
+        return new_section
+
+    @strawberry.mutation
+    async def update_section(self, section_id: int, input: SectionInput) -> Section:
+        updated_section = await prisma_client.coursesection.update(
+            where={"id": section_id},
+            data={
+                "name": input.name,
+                "summary": input.summary,
+                "sequence": input.sequence,
+                "visible": input.visible,
+                "timemodified": datetime.utcnow(),
+            }
+        )
+        if not updated_section:
+            raise Exception("Section not found")
+        return updated_section
+
+    @strawberry.mutation
+    async def delete_section(self, section_id: int) -> Section:
+        deleted_section = await prisma_client.coursesection.delete(where={"id": section_id})
+        if not deleted_section:
+            raise Exception("Section not found")
+        return deleted_section
 
 # Create schema
 schema = strawberry.Schema(query=Query, mutation=Mutation)
