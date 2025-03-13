@@ -140,4 +140,75 @@ class GraphQLUser(HttpUser):
 
         self.client.post("/graphql", json=payload, headers=headers)
 
+    @task
+    def test_login_frank(self):
+        mutation = """
+        mutation {
+            login(email: "frank@unah.edu.hn", password: "1234") {
+                id
+                username
+                email
+                firstname
+                lastname
+            }
+        }
+        """
+        headers = {"Content-Type": "application/json"}
+        payload = {"query": mutation}
+
+        self.client.post("/graphql", json=payload, headers=headers)
+
+    @task
+    def test_login_daniel(self):
+        mutation = """
+        mutation {
+            login(email: "daniel@unah.edu.hn", password: "1234") {
+                id
+                username
+                email
+                firstname
+                lastname
+            }
+        }
+        """
+        headers = {"Content-Type": "application/json"}
+        payload = {"query": mutation}
+
+        self.client.post("/graphql", json=payload, headers=headers)
+
+    @task
+    def test_login_elvis(self):
+        mutation = """
+        mutation {
+            login(email: "elvis@unah.edu.hn", password: "1234") {
+                id
+                username
+                email
+                firstname
+                lastname
+            }
+        }
+        """
+        headers = {"Content-Type": "application/json"}
+        payload = {"query": mutation}
+
+        self.client.post("/graphql", json=payload, headers=headers)
+
+    @task
+    def test_login_edwar(self):
+        mutation = """
+        mutation {
+            login(email: "edwar@unah.edu.hn", password: "1234") {
+                id
+                username
+                email
+                firstname
+                lastname
+            }
+        }
+        """
+        headers = {"Content-Type": "application/json"}
+        payload = {"query": mutation}
+
+        self.client.post("/graphql", json=payload, headers=headers)
 
