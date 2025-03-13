@@ -107,6 +107,7 @@ class Assignment:
     course: int
     name: str
     intro: str
+    section: int
     duedate: Optional[datetime]
     allowsubmissionsfromdate: Optional[datetime]
     grade: Optional[int]
@@ -326,10 +327,10 @@ class Query:
 
     # Assignment Queries
     @strawberry.field
-    async def assignments(self, course_id: Optional[int] = None) -> List[Assignment]:
+    async def assignments(self, course_id: Optional[int] = None, section_id: Optional[int] = None) -> List[Assignment]:
         
-        if course_id:
-            assignments = await prisma_client.assignment.find_many(where={"course": course_id})
+        if course_id and section_id:
+            assignments = await prisma_client.assignment.find_many(where={"course": course_id, "section": section_id})
         else:
             assignments = await prisma_client.assignment.find_many()
         
@@ -586,6 +587,7 @@ class Mutation:
                 "course": input.course,
                 "name": input.name,
                 "intro": input.intro,
+                "section": input.section,
                 "duedate": input.duedate,
                 "allowsubmissionsfromdate": input.allowsubmissionsfromdate,
                 "grade": input.grade,
