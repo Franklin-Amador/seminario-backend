@@ -93,6 +93,7 @@ class AssignmentBase(BaseModel):
     name: str
     intro: str
     introformat: int = 1
+    section:int
     duedate: Optional[datetime] = None
     allowsubmissionsfromdate: Optional[datetime] = None
     grade: Optional[int] = None

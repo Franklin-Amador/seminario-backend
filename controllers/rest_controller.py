@@ -507,6 +507,7 @@ async def create_assignment(
                 "name": assignment.name,
                 "intro": assignment.intro,
                 "introformat": assignment.introformat,
+                "section": assignment.section,
                 "duedate": assignment.duedate,
                 "allowsubmissionsfromdate": assignment.allowsubmissionsfromdate,
                 "grade": assignment.grade,

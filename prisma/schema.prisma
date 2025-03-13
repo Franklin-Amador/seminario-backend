@@ -130,6 +130,7 @@ model CourseSection {
 
   // Relaciones
   courseRelation Course @relation(fields: [course], references: [id])
+  assignments     Assignment[]
 
   @@map("mdl_course_sections")
 }
@@ -239,6 +240,7 @@ model Assignment {
   name                        String
   intro                       String    @db.Text
   introformat                 Int       @default(0)
+  section                     Int       
   alwaysshowdescription       Boolean   @default(true)
   nosubmissions               Boolean   @default(false)
   submissiondrafts            Boolean   @default(false)
@@ -264,6 +266,7 @@ model Assignment {
 
   // Relaciones
   submissions Submission[]
+  sectionRelation CourseSection @relation(fields: [section], references: [id])
 
   @@map("mdl_assign")
 }

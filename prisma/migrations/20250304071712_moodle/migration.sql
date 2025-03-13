@@ -141,17 +141,17 @@ CREATE TABLE "mdl_role" (
 
 -- CreateTable
 CREATE TABLE "mdl_role_assignments" (
-    "id" SERIAL NOT NULL,
-    "roleid" INTEGER NOT NULL,
-    "contextid" INTEGER NOT NULL,
-    "userid" INTEGER NOT NULL,
-    "timemodified" TIMESTAMP(3) NOT NULL,
-    "modifierid" INTEGER NOT NULL,
-    "component" TEXT,
-    "itemid" INTEGER NOT NULL DEFAULT 0,
-    "sortorder" INTEGER NOT NULL DEFAULT 0,
+     "id" SERIAL NOT NULL,
+        "roleid" INTEGER NOT NULL,
+        "contextid" INTEGER NOT NULL,
+        "userid" INTEGER NOT NULL,
+        "timemodified" TIMESTAMP(3) NOT NULL,
+        "modifierid" INTEGER NOT NULL,
+        "component" TEXT,
+        "itemid" INTEGER NOT NULL DEFAULT 0,
+        "sortorder" INTEGER NOT NULL DEFAULT 0,
 
-    CONSTRAINT "mdl_role_assignments_pkey" PRIMARY KEY ("id")
+        CONSTRAINT "mdl_role_assignments_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -176,6 +176,7 @@ CREATE TABLE "mdl_assign" (
     "name" TEXT NOT NULL,
     "intro" TEXT NOT NULL,
     "introformat" INTEGER NOT NULL DEFAULT 0,
+    "section" INTEGER NOT NULL,
     "alwaysshowdescription" BOOLEAN NOT NULL DEFAULT true,
     "nosubmissions" BOOLEAN NOT NULL DEFAULT false,
     "submissiondrafts" BOOLEAN NOT NULL DEFAULT false,
@@ -517,3 +518,5 @@ ALTER TABLE "mdl_forum_posts" ADD CONSTRAINT "mdl_forum_posts_discussion_fkey" F
 
 -- AddForeignKey
 ALTER TABLE "mdl_grade_grades" ADD CONSTRAINT "mdl_grade_grades_itemid_fkey" FOREIGN KEY ("itemid") REFERENCES "mdl_grade_items"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+ALTER TABLE "mdl_assign" ADD CONSTRAINT "mdl_assign_section_fkey" FOREIGN KEY ("section") REFERENCES "mdl_course_sections"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
