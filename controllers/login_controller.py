@@ -52,10 +52,9 @@ async def login(login_data: LoginRequest):
     
     # Verificar si el usuario existe y la contraseña es correcta
     if not user or not checkpw(login_data.password.encode('utf-8'), user.password.encode('utf-8')):
-        await prisma_client.disconnect()
-        return LoginResponse(
-            success=False,
-            message="Credenciales incorrectas"
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Credenciales incorrectas"
         )
     
     # Obtener roles del usuario
