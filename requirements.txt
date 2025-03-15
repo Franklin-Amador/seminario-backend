@@ -7,3 +7,6 @@ pydantic==2.6.1
 email-validator==2.1.0
 bcrypt==4.3.0
 locust==2.33.1
+matplotlib==3.10.1
+httpx==0.28.1
+playwright==1.50.0
