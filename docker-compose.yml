@@ -12,11 +12,25 @@ services:
       - .:/app
       - uploads_data:/app/uploads
     restart: always
+    deploy:
+      resources:
+        # Sin límites máximos estrictos para permitir escalado dinámico
+        # pero con reservas para garantizar recursos mínimos
+        reservations:
+          cpus: '1'
+          memory: 1G
     command: >
-      sh -c "cd prisma && prisma migrate deploy && cd .. && echo 'Esperando que la base de datos esté disponible...' &&
+      sh -c "cd prisma &&
+      prisma migrate deploy &&
+      cd .. &&
+      echo 'Esperando que la base de datos esté disponible...' &&
         until PGPASSWORD=postgres psql -h db -U postgres -d campus_virtual -c 'SELECT 1'; do
         sleep 1;
-      done && echo 'Base de datos lista, ejecutando script de inicialización...' && PGPASSWORD=postgres psql -h db -U postgres -d campus_virtual -f /app/scripts/init.sql && uvicorn main:app --host 0.0.0.0 --port 8000 --reload"
+      done &&
+      echo 'Base de datos lista, ejecutando script de inicialización...' &&
+      PGPASSWORD=postgres psql -h db -U postgres -d campus_virtual -f /app/scripts/init.sql &&
+      uvicorn main:app --host 0.0.0.0 --port 8000 --reload"
+
   db:
     image: postgres:13
     ports:
@@ -25,9 +39,32 @@ services:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
       - POSTGRES_DB=campus_virtual
+      - POSTGRES_INITDB_ARGS=--encoding=UTF-8
+      # Optimizaciones para PostgreSQL
+      - POSTGRES_SHARED_BUFFERS=4GB
+      - POSTGRES_EFFECTIVE_CACHE_SIZE=12GB
+      - POSTGRES_WORK_MEM=64MB
+      - POSTGRES_MAINTENANCE_WORK_MEM=512MB
+      - POSTGRES_MAX_WORKER_PROCESSES=8
+      - POSTGRES_MAX_PARALLEL_WORKERS=8
+      - POSTGRES_MAX_PARALLEL_WORKERS_PER_GATHER=4
     volumes:
       - postgres_data:/var/lib/postgresql/data
     restart: always
+    deploy:
+      resources:
+        # Sin límites máximos para la base de datos, permitiendo uso dinámico
+        reservations:
+          cpus: '1'
+          memory: 2G
+    # Script personalizado para aplicar configuraciones de PostgreSQL
+    command: >
+      bash -c "
+        docker-entrypoint.sh postgres -c shared_buffers=4GB -c effective_cache_size=12GB -c work_mem=64MB
+        -c maintenance_work_mem=512MB -c max_worker_processes=8 -c max_parallel_workers=8
+        -c max_parallel_workers_per_gather=4 -c random_page_cost=1.1 -c effective_io_concurrency=200
+        -c checkpoint_completion_target=0.9 -c wal_buffers=16MB -c default_statistics_target=100
+      "
 
 volumes:
   postgres_data:
