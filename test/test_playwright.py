@@ -134,6 +134,30 @@ async def get_usuarios(playwright, stats, context):
         stats.add_failure()
     finally:
         await page.close()
+        
+# funcios para endpoint de categorias
+async def get_categorias(playwright, stats, context):
+    start_time = time.time()
+    try:
+        page = await context.new_page()  # Usar el context proporcionado
+        page.set_default_timeout(10000)
+        response = await page.goto(f'{BASE_URL}/api/categories')
+        if response and response.status == 200:
+            content = await page.text_content('pre')
+            categorias = json.loads(content)
+            if isinstance(categorias, list) and len(categorias) > 0:
+                stats.add_success(time.time() - start_time)
+                print("✓ GET /api/categories exitoso")
+                return
+            else:
+                print("x GET /api/categories: respuesta vacía o formato incorrecto")
+        else:
+            print(f"x GET /api/categories: estado {response.status if response else 'desconocido'}")
+    except Exception as e:
+        print(f"Error en get_categorias: {str(e)}")
+        stats.add_failure()
+    finally:
+        await page.close()
 
 # funcion para probar endpoint de login
 async def login(playwright, stats, context, valid=True, max_retries=2):
