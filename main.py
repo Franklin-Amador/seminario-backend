@@ -7,15 +7,36 @@ from controllers.file_controller import router as file_router
 from controllers.rest_controller import router as rest_router
 from controllers.login_controller import router as login_router
 from db import prisma_client
+import logging
 
+# Configurar logging para toda la aplicación
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+)
+logger = logging.getLogger(__name__)
+
+class CustomGraphQL(GraphQL):
+    async def process_result(self, request, result):
+        # Log GraphQL errors
+        if result.errors:
+            for error in result.errors:
+                error_message = str(error)
+                logger.error(f"GraphQL Error: {error_message}")
+        
+        return await super().process_result(request, result)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Código que se ejecuta al iniciar la aplicación
+    logger.info("Conectando a la base de datos...")
     await prisma_client.connect()
+    logger.info("Conexión a la base de datos establecida")
     yield  # La aplicación está en ejecución
     # Código que se ejecuta al cerrar la aplicación
+    logger.info("Cerrando conexión a la base de datos...")
     await prisma_client.disconnect()
+    logger.info("Conexión a la base de datos cerrada")
 
 
 app = FastAPI(title="Campus Virtual API", description="Backend API para Campus Virtual", lifespan=lifespan)
@@ -38,8 +59,16 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Añadir la ruta de GraphQL
-graphql_app = GraphQL(schema)
+# Logging middleware para registrar todas las solicitudes
+@app.middleware("http")
+async def log_requests(request, call_next):
+    logger.info(f"Request: {request.method} {request.url}")
+    response = await call_next(request)
+    logger.info(f"Response status: {response.status_code}")
+    return response
+
+# Añadir la ruta de GraphQL con la versión personalizada que hace logging de errores
+graphql_app = CustomGraphQL(schema)
 app.add_route("/graphql", graphql_app)
 app.add_websocket_route("/graphql", graphql_app)
 
@@ -50,6 +79,7 @@ app.include_router(rest_router)
 
 @app.get("/")
 def read_root():
+    logger.info("Acceso a la ruta raíz")
     return {
         "message": "Bienvenido a la API del Campus Virtual",
         "docs": "/docs",
@@ -61,13 +91,17 @@ async def healthcheck():
     try:
         # Verificar conexión a la base de datos     
         await prisma_client.role.count()
+        logger.info("Healthcheck ejecutado correctamente")
         return {"status": "ok", "message": "API y base de datos funcionando correctamente"}
     except Exception as e:
+        error_msg = f"Error en el healthcheck: {str(e)}"
+        logger.error(error_msg)
         raise HTTPException(
             status_code=500,
-            detail=f"Error en el healthcheck: {str(e)}"
+            detail=error_msg
         )
 
 if __name__ == "__main__":
     import uvicorn
+    logger.info("Iniciando servidor...")
     uvicorn.run(app, host="0.0.0.0", port=8000)

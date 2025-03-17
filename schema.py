@@ -1,12 +1,21 @@
 import strawberry
 from strawberry.fastapi import GraphQLRouter
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI
 import uvicorn
 from datetime import datetime
-from typing import List, Optional
+from typing import List, Optional, Any, Dict, Union
 import bcrypt
 from bcrypt import checkpw, gensalt, hashpw
 from db import prisma_client
+from exceptions import NotFoundError, UnauthorizedError
+import logging
+
+# Configurar logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+)
+logger = logging.getLogger(__name__)
 
 # User Types
 @strawberry.type
@@ -211,6 +220,17 @@ class CourseCompletion:
     timestarted: datetime
     timecompleted: Optional[datetime]
 
+# Error types para manejo de errores
+@strawberry.type
+class ErrorResponse:
+    message: str
+    code: int
+
+@strawberry.type
+class UserResponse:
+    user: Optional[User] = None
+    error: Optional[ErrorResponse] = None
+
 # Input Types for Mutations
 @strawberry.input
 class RoleInput:
@@ -283,6 +303,7 @@ class Query:
     async def user(self, user_id: int) -> User:      
         user = await prisma_client.user.find_unique(where={"id": user_id})       
         if not user:
+            logger.error(f"User not found: {user_id}")
             raise Exception("User not found")
         return user
 
@@ -297,6 +318,7 @@ class Query:
         course = await prisma_client.course.find_unique(where={"id": course_id})
         
         if not course:
+            logger.error(f"Course not found: {course_id}")
             raise Exception("Course not found")
         return course
 
@@ -316,6 +338,7 @@ class Query:
         category = await prisma_client.category.find_unique(where={"id": category_id})
         
         if not category:
+            logger.error(f"Category not found: {category_id}")
             raise Exception("Category not found")
         return category
 
@@ -325,6 +348,7 @@ class Query:
         roles = await prisma_client.role.find_many()
         
         if not roles:
+            logger.error("Roles not found")
             raise Exception("Roles not found")
         return roles
 
@@ -332,6 +356,7 @@ class Query:
     async def role(self, role_id: int) -> Role:       
         role = await prisma_client.role.find_unique(where={"id": role_id})        
         if not role:
+            logger.error(f"Role not found: {role_id}")
             raise Exception("Role not found")
         return role
 
@@ -348,6 +373,7 @@ class Query:
     async def assignment(self, assignment_id: int) -> Assignment:       
         assignment = await prisma_client.assignment.find_unique(where={"id": assignment_id})      
         if not assignment:
+            logger.error(f"Assignment not found: {assignment_id}")
             raise Exception("Assignment not found")
         return assignment
 
@@ -456,6 +482,7 @@ class Mutation:
         )
         
         if not updated_role:
+            logger.error(f"Role not found: {role_id}")
             raise Exception("Role not found")
         return updated_role
 
@@ -465,6 +492,7 @@ class Mutation:
         deleted_role = await prisma_client.role.delete(where={"id": role_id})
         
         if not deleted_role:
+            logger.error(f"Role not found: {role_id}")
             raise Exception("Role not found")
         return deleted_role
 
@@ -473,10 +501,13 @@ class Mutation:
     async def create_user(self, input: UserInput) -> User:
         
         now = datetime.utcnow()
+        # Ensure password is hashed before storing
+        hashed_password = bcrypt.hashpw(input.password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+        
         new_user = await prisma_client.user.create(
             data={
                 "username": input.username,
-                "password": input.password,  # In production, this should be hashed
+                "password": hashed_password,
                 "firstname": input.firstname,
                 "lastname": input.lastname,
                 "email": input.email,
@@ -484,6 +515,9 @@ class Mutation:
                 "department": input.department,
                 "timecreated": now,
                 "timemodified": now,
+                "confirmed": True,
+                "deleted": False,
+                "suspended": False
             }
         )
         
@@ -495,12 +529,14 @@ class Mutation:
         user_id: int,
         input: UserInput
     ) -> User:
+        # Ensure password is hashed before storing
+        hashed_password = bcrypt.hashpw(input.password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
         
         updated_user = await prisma_client.user.update(
             where={"id": user_id},
             data={
                 "username": input.username,
-                "password": input.password,  # In production, this should be hashed
+                "password": hashed_password,
                 "firstname": input.firstname,
                 "lastname": input.lastname,
                 "email": input.email,
@@ -511,6 +547,7 @@ class Mutation:
         )
         
         if not updated_user:
+            logger.error(f"User not found: {user_id}")
             raise Exception("User not found")
         return updated_user
 
@@ -563,6 +600,7 @@ class Mutation:
         )
         
         if not updated_course:
+            logger.error(f"Course not found: {course_id}")
             raise Exception("Course not found")
         return updated_course
 
@@ -608,6 +646,7 @@ class Mutation:
         )
         
         if not updated_assignment:
+            logger.error(f"Assignment not found: {assignment_id}")
             raise Exception("Assignment not found")
         return updated_assignment
 
@@ -650,6 +689,7 @@ class Mutation:
         )
         
         if not updated_enrollment:
+            logger.error(f"Enrollment not found: {enrollment_id}")
             raise Exception("Enrollment not found")
         return updated_enrollment
 
@@ -659,59 +699,97 @@ class Mutation:
         deleted_enrollment = await prisma_client.enrollment.delete(where={"id": enrollment_id})
         
         if not deleted_enrollment:
+            logger.error(f"Enrollment not found: {enrollment_id}")
             raise Exception("Enrollment not found")
         return deleted_enrollment
     
-# Mutación de login sin tokens
+    # Login mutation con manejo de errores usando tipos de respuesta personalizados
     @strawberry.mutation
-    async def login(self, email: str, password: str) -> User:
-        
-        user = await prisma_client.user.find_unique(where={"email": email})
-        
-
-        # Verificar si el usuario existe
-        if not user:
-            raise HTTPException(status_code=404, detail="Usuario no encontrado")
-
-        # Verificar la contraseña utilizando bcrypt
-        if not bcrypt.checkpw(password.encode("utf-8"), user.password.encode("utf-8")):
-            raise HTTPException(status_code=401, detail="Contraseña incorrecta")
-
-    # Retornar los datos del usuario
-        return User(
-            id=user.id,
-            username=user.username,
-            email=user.email,
-            firstname=user.firstname,
-            lastname=user.lastname,
-            confirmed=user.confirmed,
-            deleted=user.deleted,
-            suspended=user.suspended,
-            institution=user.institution,  # Opción de obtenerlo de la base de datos
-            department=user.department,    # Opción de obtenerlo de la base de datos
-            timecreated=user.timecreated,  # Asegúrate de pasar los campos
-            timemodified=user.timemodified # Asegúrate de pasar los campos
-        )
-
-    # Mutación para cambiar la contraseña
-    @strawberry.mutation
-    async def change_password(self, email: str, new_password: str) -> User:
-        
-        user = await prisma_client.user.find_unique(where={"email": email})
-
-        if not user:
+    async def login(self, email: str, password: str) -> UserResponse:
+        try:
+            user = await prisma_client.user.find_unique(where={"email": email})
             
-            raise HTTPException(status_code=404, detail="Usuario no encontrado")
+            # Verificar si el usuario existe
+            if not user:
+                logger.error(f"Login failed: Usuario no encontrado - {email}")
+                return UserResponse(
+                    error=ErrorResponse(
+                        message="Usuario no encontrado",
+                        code=404
+                    )
+                )
 
-        hashed_new_password = bcrypt.hashpw(new_password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+            # Verificar la contraseña utilizando bcrypt
+            if not bcrypt.checkpw(password.encode("utf-8"), user.password.encode("utf-8")):
+                logger.error(f"Login failed: Credenciales incorrectas - {email}")
+                return UserResponse(
+                    error=ErrorResponse(
+                        message="Credenciales incorrectas",
+                        code=401
+                    )
+                )
 
-        updated_user = await prisma_client.user.update(
-            where={"email": email},
-            data={"password": hashed_new_password, "timemodified": datetime.utcnow()}
-        )
+            # Login exitoso - registrar
+            logger.info(f"Login successful: {email}")
+            
+            # Retornar los datos del usuario exitosamente
+            return UserResponse(
+                user=User(
+                    id=user.id,
+                    username=user.username,
+                    email=user.email,
+                    firstname=user.firstname,
+                    lastname=user.lastname,
+                    confirmed=user.confirmed,
+                    deleted=user.deleted,
+                    suspended=user.suspended,
+                    institution=user.institution,
+                    department=user.department,
+                    timecreated=user.timecreated,
+                    timemodified=user.timemodified
+                )
+            )
+        except Exception as e:
+            logger.error(f"Login error: {str(e)}")
+            return UserResponse(
+                error=ErrorResponse(
+                    message=f"Error interno: {str(e)}",
+                    code=500
+                )
+            )
         
-        return updated_user
-     
+    # Mutación para cambiar la contraseña con manejo de errores
+    @strawberry.mutation
+    async def change_password(self, email: str, new_password: str) -> UserResponse:
+        try:
+            user = await prisma_client.user.find_unique(where={"email": email})
+
+            if not user:
+                logger.error(f"Change password failed: Usuario no encontrado - {email}")
+                return UserResponse(
+                    error=ErrorResponse(
+                        message="Usuario no encontrado",
+                        code=404
+                    )
+                )
+
+            hashed_new_password = bcrypt.hashpw(new_password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+
+            updated_user = await prisma_client.user.update(
+                where={"email": email},
+                data={"password": hashed_new_password, "timemodified": datetime.utcnow()}
+            )
+            
+            logger.info(f"Password changed successfully for user: {email}")
+            return UserResponse(user=updated_user)
+        except Exception as e:
+            logger.error(f"Change password error: {str(e)}")
+            return UserResponse(
+                error=ErrorResponse(
+                    message=f"Error interno: {str(e)}",
+                    code=500
+                )
+            )
      
     # Section Mutations
     @strawberry.mutation
@@ -750,6 +828,7 @@ class Mutation:
             }
         )
         if not updated_section:
+            logger.error(f"Section not found: {section_id}")
             raise Exception("Section not found")
         return updated_section
 
@@ -757,8 +836,10 @@ class Mutation:
     async def delete_section(self, section_id: int) -> Section:
         deleted_section = await prisma_client.coursesection.delete(where={"id": section_id})
         if not deleted_section:
+            logger.error(f"Section not found: {section_id}")
             raise Exception("Section not found")
         return deleted_section
 
-# Create schema
+
+# Create schema without extensions (usando un enfoque más sencillo)
 schema = strawberry.Schema(query=Query, mutation=Mutation)
