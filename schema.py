@@ -368,6 +368,21 @@ class Query:
         else:
             assignments = await prisma_client.assignment.find_many()      
         return assignments
+    
+    # Todas las asignaciones
+    @strawberry.field
+    async def AllAssigments(self) -> List[Assignment]:        
+        assignments = await prisma_client.assignment.find_many()       
+        return assignments
+    
+    # Asignaciones del curso
+    @strawberry.field
+    async def CourseAssignments(self, course_id: Optional[int] = None) -> List[Assignment]:       
+        if course_id:
+            assignments = await prisma_client.assignment.find_many(where={"course": course_id})
+        else:
+            assignments = await prisma_client.assignment.find_many()      
+        return assignments
 
     @strawberry.field
     async def assignment(self, assignment_id: int) -> Assignment:       
