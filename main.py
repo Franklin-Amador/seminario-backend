@@ -4,8 +4,19 @@ from contextlib import asynccontextmanager
 from strawberry.asgi import GraphQL
 from schema import schema
 from controllers.file_controller import router as file_router
-from controllers.rest_controller import router as rest_router
+# from controllers.rest_controller import router as rest_router
 from controllers.login_controller import router as login_router
+from controllers.assignaments_controllers import router as assignaments_router
+from controllers.courses_controller import router as courses_router
+from controllers.claifications_controller import router as califications_router
+from controllers.sections_controller import router as sections_router
+from controllers.user_controller import router as user_router
+from controllers.role_controller import router as role_router
+from controllers.forum_controller import router as forum_controller 
+from controllers.enrrollments_controller import router as enrollments_router
+from controllers.summision_controller import router as summision_router
+
+
 from db import prisma_client
 import logging
 
@@ -75,7 +86,17 @@ app.add_websocket_route("/graphql", graphql_app)
 # Incluir los routers
 app.include_router(login_router)  # Añadido el router de login
 app.include_router(file_router)
-app.include_router(rest_router)
+app.include_router(courses_router)
+app.include_router(forum_controller)
+app.include_router(assignaments_router)
+app.include_router(sections_router)
+app.include_router(califications_router)
+app.include_router(user_router)
+app.include_router(enrollments_router)
+app.include_router(role_router)
+app.include_router(summision_router)
+
+# app.include_router(rest_router)
 
 @app.get("/")
 def read_root():
