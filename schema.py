@@ -375,13 +375,26 @@ class Query:
         assignments = await prisma_client.assignment.find_many()       
         return assignments
     
+    @strawberry.field
+    async def AllAssigmentsProx(self) -> List[Assignment]:        
+        today = datetime.utcnow()
+        assignments = await prisma_client.assignment.find_many(
+        where={"duedate": {"gte": today}}
+    )      
+        return assignments
+    
     # Asignaciones del curso
     @strawberry.field
-    async def CourseAssignments(self, course_id: Optional[int] = None) -> List[Assignment]:       
+    async def CourseAssignmentsProx(self, course_id: Optional[int] = None) -> List[Assignment]:       
+        today = datetime.utcnow()
         if course_id:
-            assignments = await prisma_client.assignment.find_many(where={"course": course_id})
+            assignments = await prisma_client.assignment.find_many(
+            where={"course": course_id, "duedate": {"gte": today}}
+        )
         else:
-            assignments = await prisma_client.assignment.find_many()      
+            assignments = await prisma_client.assignment.find_many(
+            where={"duedate": {"gte": today}}
+        )    
         return assignments
 
     @strawberry.field
