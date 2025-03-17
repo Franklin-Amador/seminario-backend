@@ -15,6 +15,7 @@ from controllers.role_controller import router as role_router
 from controllers.forum_controller import router as forum_controller 
 from controllers.enrrollments_controller import router as enrollments_router
 from controllers.summision_controller import router as summision_router
+from controllers.category_controller import router as category_router
 
 
 from db import prisma_client
@@ -95,6 +96,7 @@ app.include_router(user_router)
 app.include_router(enrollments_router)
 app.include_router(role_router)
 app.include_router(summision_router)
+app.include_router(category_router)
 
 # app.include_router(rest_router)
 
