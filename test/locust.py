@@ -14,10 +14,10 @@ class WebsiteUser(HttpUser):
     @task
     def index(self):
         self.client.get("/")
-        self.client.get("/api/courses")
-        self.client.get("/api/categories")
-        self.client.get("/api/roles")
-        self.client.get("/api/users")
+        # self.client.get("/api/courses")
+        # self.client.get("/api/categories")
+        # self.client.get("/api/roles")
+        # self.client.get("/api/users")
         
         
 
