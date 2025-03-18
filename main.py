@@ -71,7 +71,7 @@ def read_root():
     logger.info("Acceso a la ruta raíz")
     return {
         "message": "Bienvenido a la API del Campus Virtual",
-        "docs": "/docs"
+        # "docs": "/docs"
     }
 
 
