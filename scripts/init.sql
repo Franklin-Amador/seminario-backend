@@ -312,3 +312,104 @@ BEGIN
         VALUES (is_id, 4, 'Pruebas', 'Metodologías de pruebas de software', true, CURRENT_TIMESTAMP);
     END IF;
 END $$;
+
+
+-- Archivo: seed_test_users.sql
+-- Script para crear usuarios de prueba para benchmarking con Locust
+
+-- Contraseña encriptada para '1234' usando bcrypt (hash fijo para pruebas)
+-- En producción, cada usuario tendría un salt diferente
+DO $$
+DECLARE
+    v_hashed_password TEXT := '$2b$12$Fh.KcXA9e5XA4XgYXjf/U.7e6g2pQS28O4.1XfUVTXCCcQqA5EBJO'; -- hash de '1234'
+    v_first_names TEXT[] := ARRAY['Juan', 'María', 'Carlos', 'Ana', 'Luis', 'Elena', 'Pedro', 'Laura', 'Miguel', 'Sofía'];
+    v_last_names TEXT[] := ARRAY['García', 'Rodríguez', 'Martínez', 'López', 'González', 'Pérez', 'Sánchez', 'Romero', 'Torres', 'Díaz'];
+    v_first TEXT;
+    v_last TEXT;
+    v_current_time TIMESTAMP := NOW();
+BEGIN
+    -- Crear 10 usuarios de prueba
+    FOR i IN 1..10 LOOP
+        v_first := v_first_names[1 + (i-1) % array_length(v_first_names, 1)];
+        v_last := v_last_names[1 + (i-1) % array_length(v_last_names, 1)];
+        
+        -- Insertar usuario con contraseña encriptada
+        INSERT INTO mdl_user (
+            username, 
+            password, 
+            firstname, 
+            lastname, 
+            email, 
+            auth, 
+            confirmed, 
+            lang, 
+            timezone, 
+            deleted, 
+            suspended, 
+            mnethostid, 
+            timecreated, 
+            timemodified
+        ) VALUES (
+            'user' || i,                          -- username
+            v_hashed_password,                    -- password (hash de '1234')
+            v_first,                              -- firstname
+            v_last,                               -- lastname
+            'user' || i || '@example.com',        -- email
+            'manual',                             -- auth
+            TRUE,                                 -- confirmed
+            'es',                                 -- lang
+            '99',                                 -- timezone
+            FALSE,                                -- deleted
+            FALSE,                                -- suspended
+            1,                                    -- mnethostid
+            v_current_time,                       -- timecreated
+            v_current_time                        -- timemodified
+        ) ON CONFLICT (username) DO NOTHING;      -- Evitar duplicados
+    END LOOP;
+    
+    -- Asignar algunos roles a los usuarios (suponiendo que existen roles básicos)
+    -- Si no existen los roles, primero hay que crearlos
+    INSERT INTO mdl_role (name, shortname, description, sortorder)
+    VALUES 
+        ('Administrador', 'admin', 'Acceso completo al sistema', 1),
+        ('Profesor', 'teacher', 'Puede crear y gestionar cursos', 2),
+        ('Estudiante', 'student', 'Puede acceder a cursos', 3)
+    ON CONFLICT (shortname) DO NOTHING;
+    
+    -- Asignar roles a los usuarios
+    -- Usuarios 1-3: administradores
+    -- Usuarios 4-7: profesores
+    -- Usuarios 8-10: estudiantes
+    FOR i IN 1..10 LOOP
+        -- Obtener ID del usuario
+        DECLARE
+            v_user_id INTEGER;
+            v_role_id INTEGER;
+        BEGIN
+            -- Obtener ID del usuario
+            SELECT id INTO v_user_id FROM mdl_user WHERE username = 'user' || i;
+            
+            -- Determinar qué rol asignar
+            IF i <= 3 THEN
+                SELECT id INTO v_role_id FROM mdl_role WHERE shortname = 'admin';
+            ELSIF i <= 7 THEN
+                SELECT id INTO v_role_id FROM mdl_role WHERE shortname = 'teacher';
+            ELSE
+                SELECT id INTO v_role_id FROM mdl_role WHERE shortname = 'student';
+            END IF;
+            
+            -- Asignar rol al usuario
+            INSERT INTO mdl_role_assignments (roleid, contextid, userid, timemodified, modifierid)
+            VALUES (
+                v_role_id,       -- roleid
+                1,               -- contextid (1 es típicamente el contexto global)
+                v_user_id,       -- userid
+                v_current_time,  -- timemodified
+                1                -- modifierid (suponemos que el admin con ID 1 hizo la asignación)
+            ) ON CONFLICT DO NOTHING;
+        END;
+    END LOOP;
+    
+    -- Log de finalización
+    RAISE NOTICE 'Se crearon 10 usuarios de prueba con la contraseña "1234" y roles asignados';
+END; $$;
