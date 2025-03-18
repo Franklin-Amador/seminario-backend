@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, status, Request, Depends
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, ValidationError
 import bcrypt
 from typing import Optional, List, Dict, Any
 import os
@@ -26,14 +26,20 @@ def get_db_connection():
         conn = pool.getconn()
         conn.autocommit = False  # Usamos transacciones explícitas
         yield conn
+    except psycopg2.Error as e:
+        logger.error(f"Error al obtener conexión de la base de datos: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error de conexión a la base de datos"
+        )
     finally:
         if conn:
             pool.putconn(conn)
 
 # Modelos de datos
 class LoginRequest(BaseModel):
-    username: str
-    password: str
+    username: str = Field(..., min_length=1, max_length=100)
+    password: str = Field(..., min_length=1, max_length=100)
 
 class LoginResponse(BaseModel):
     success: bool
