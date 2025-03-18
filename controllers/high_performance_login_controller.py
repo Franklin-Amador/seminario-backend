@@ -100,7 +100,7 @@ async def login(login_data: LoginRequest, request: Request):
                 ):
                     # Registrar intento fallido
                     cur.execute(
-                        "SELECT sp_audit_login_attempt(%s, %s, %s, %s)",
+                        "SELECT audit_login_attempt(%s, %s, %s, %s)",
                         (login_data.username, client_info["ip"], client_info["user_agent"], False)
                     )
                     conn.commit()
@@ -129,7 +129,7 @@ async def login(login_data: LoginRequest, request: Request):
                 
                 # Registrar login exitoso
                 cur.execute(
-                    "SELECT sp_audit_login_attempt(%s, %s, %s, %s)",
+                    "SELECT audit_login_attempt(%s, %s, %s, %s)",
                     (login_data.username, client_info["ip"], client_info["user_agent"], True)
                 )
                 conn.commit()
@@ -172,7 +172,7 @@ async def update_password(update_data: UpdatePasswordRequest):
                 ).decode('utf-8')
                 
                 # Usar procedimiento almacenado para actualizar contraseña
-                cur.execute("SELECT * FROM sp_update_user_password(%s, %s)",
+                cur.execute("SELECT * FROM update_user_password(%s, %s)",
                            (update_data.email, hashed_password))
                 
                 result = cur.fetchone()
@@ -220,7 +220,7 @@ async def reset_all_passwords(update_data: BulkPasswordUpdateRequest):
                     ).decode('utf-8')
                     
                     # Usar procedimiento almacenado para restablecer contraseñas
-                    cur.execute("SELECT * FROM sp_reset_all_passwords(%s)", 
+                    cur.execute("SELECT * FROM reset_all_passwords(%s)", 
                                (hashed_password,))
                     
                     result = cur.fetchone()
