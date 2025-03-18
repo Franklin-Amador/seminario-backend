@@ -4,12 +4,12 @@ from locust import HttpUser, between, task
 class WebsiteUser(HttpUser):
     wait_time = between(5, 15)
     
-    @task
-    def login(self):
-        self.client.post("/login", json={
-            "username": "frank",
-            "password": "1234"
-        })
+    # @task
+    # def login(self):
+    #     self.client.post("/login", json={
+    #         "username": "frank",
+    #         "password": "1234"
+    #     })
     
     @task
     def index(self):
