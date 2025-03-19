@@ -78,7 +78,7 @@ def get_client_info(request: Request):
     }
 
 # Endpoint para login optimizado
-@router.post("", response_model=LoginResponse)
+# @router.post("", response_model=LoginResponse)
 async def login(login_data: LoginRequest, request: Request):
     start_time = time.time()
     client_info = get_client_info(request)
@@ -166,7 +166,7 @@ async def login(login_data: LoginRequest, request: Request):
         duration = time.time() - start_time
         logger.info(f"Login attempt: user={login_data.username}, success={success}, duration={duration:.3f}s")
 
-@router.put("/update-password", response_model=LoginResponse)
+# @router.put("/update-password", response_model=LoginResponse)
 async def update_password(update_data: UpdatePasswordRequest):
     try:
         with get_db_connection() as conn:
@@ -204,7 +204,7 @@ async def update_password(update_data: UpdatePasswordRequest):
             detail=f"Error al actualizar la contraseña: {str(e)}"
         )
 
-@router.put("/reset-all-passwords", response_model=BulkPasswordUpdateResponse)
+# @router.put("/reset-all-passwords", response_model=BulkPasswordUpdateResponse)
 async def reset_all_passwords(update_data: BulkPasswordUpdateRequest):
     try:
         # Clave de administrador (debe moverse a variables de entorno en producción)

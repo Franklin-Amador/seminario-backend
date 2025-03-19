@@ -1,10 +1,11 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, requests, Request
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 # from strawberry.asgi import GraphQL
 # from schema import schema
 
-from controllers.high_performance_login_controller import router as login_router
+from controllers.high_performance_login_controller import login, update_password, reset_all_passwords
+from controllers.high_performance_login_controller import LoginRequest,LoginResponse, BulkPasswordUpdateRequest, BulkPasswordUpdateResponse, UpdatePasswordRequest
 
 import logging
 
@@ -61,8 +62,17 @@ async def log_requests(request, call_next):
 # app.add_route("/graphql", graphql_app)
 # app.add_websocket_route("/graphql", graphql_app)
 
-# Incluir los routers
-app.include_router(login_router)
+@app.post("/api/login", response_model=LoginResponse)
+async def login_endpoint(request: Request, login_data: LoginRequest):
+    return await login(login_data, request)
+
+@app.put("/api/update_password", response_model=LoginResponse)
+async def update_password_endpoint(update_data: UpdatePasswordRequest):
+    return await update_password(update_data)
+
+@app.put("/api/reset_all_passwords", response_model=BulkPasswordUpdateResponse)
+async def reset_all_passwords_endpoint(update_data: BulkPasswordUpdateRequest):
+    return await reset_all_passwords(update_data)
 
 # app.include_router(rest_router)
 
