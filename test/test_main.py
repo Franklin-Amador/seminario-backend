@@ -6,7 +6,11 @@ client = TestClient(app)
 def test_read_root():
     response = client.get("/")
     assert response.status_code == 200
-    assert response.json() == {"message": "Bienvenido a la API del Campus Virtual"}
+    assert response.json() == {
+        "message": "Bienvenido a la API del Campus Virtual",
+        "docs": "/docs",
+        "graphql": "/graphql"
+    }
     
     
 def test_login_success():
