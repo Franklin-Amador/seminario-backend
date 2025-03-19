@@ -192,7 +192,7 @@ async def login(playwright, stats, context, valid=True, max_retries=2):
                     body: error.toString()
                 };
             }
-        }''', { "url": f'{BASE_URL}/login', "data": login_data })  # Pasar un solo objeto
+        }''', { "url": f'{BASE_URL}/api/login', "data": login_data })  # Pasar un solo objeto
 
         if response['status'] == 200:
             # Verificar el contenido de la respuesta

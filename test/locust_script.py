@@ -18,7 +18,7 @@ class LoginUser(HttpUser):
         
         # Realizar solicitud de login
         response = self.client.post(
-            "/login",
+            "/api/login",
             json=user,
             headers={"Content-Type": "application/json"}
         )
@@ -49,7 +49,7 @@ class LoginUser(HttpUser):
         
         # Realizar solicitud
         response = self.client.put(
-            "/login/update-password",
+            "/api/update_password",
             json=update_data,
             headers={"Content-Type": "application/json"}
         )
@@ -68,7 +68,7 @@ class LoginUser(HttpUser):
         
         # Realizar solicitud
         response = self.client.put(
-            "/login/reset-all-passwords",
+            "/api/reset_all_passwords",
             json=reset_data,
             headers={"Content-Type": "application/json"}
         )
