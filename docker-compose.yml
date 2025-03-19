@@ -34,6 +34,8 @@ services:
       PGPASSWORD=postgres psql -h db -U postgres -d campus_virtual -f /app/scripts/stored_procedures.sql &&
       echo 'Ejecutando script de índices...' &&
       PGPASSWORD=postgres psql -h db -U postgres -d campus_virtual -f /app/scripts/indexes.sql &&
+      echo 'Ejecutando script de fix...' &&
+      PGPASSWORD=postgres psql -h db -U postgres -d campus_virtual -f /app/scripts/fix_stored_procedures.sql &&
       echo 'Base de datos configurada exitosamente!' &&
       uvicorn main:app --host 0.0.0.0 --port 8000 --workers 12"
 

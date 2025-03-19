@@ -1,13 +1,17 @@
-from fastapi import FastAPI, HTTPException, requests, Request
+from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
-# from strawberry.asgi import GraphQL
-# from schema import schema
-
-from controllers.high_performance_login_controller import login, update_password, reset_all_passwords
-from controllers.high_performance_login_controller import LoginRequest,LoginResponse, BulkPasswordUpdateRequest, BulkPasswordUpdateResponse, UpdatePasswordRequest
-
+from strawberry.fastapi import GraphQLRouter
+import uvicorn
 import logging
+
+# Importar los controladores existentes
+from controllers.high_performance_login_controller import login, update_password, reset_all_passwords
+from controllers.high_performance_login_controller import LoginRequest, LoginResponse, BulkPasswordUpdateRequest, BulkPasswordUpdateResponse, UpdatePasswordRequest
+
+# Importar nuestro esquema GraphQL y la conexión a BD
+from schema import schema
+from db import close_pool, Database
 
 # Configurar logging para toda la aplicación
 logging.basicConfig(
@@ -16,52 +20,64 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# class CustomGraphQL(GraphQL):
-#     async def process_result(self, request, result):
-#         # Log GraphQL errors
-#         if result.errors:
-#             for error in result.errors:
-#                 error_message = str(error)
-#                 logger.error(f"GraphQL Error: {error_message}")
-        
-#         return await super().process_result(request, result)
+# Función de lifespan para gestionar la inicialización y cierre de recursos
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Código que se ejecuta antes de iniciar la aplicación
+    logger.info("Iniciando aplicación...")
+    try:
+        # Verificar la conexión a la base de datos
+        pool = Database.get_pool()
+        if pool:
+            logger.info("Pool de conexiones verificado")
+        else:
+            logger.warning("El pool de conexiones no está disponible")
+    except Exception as e:
+        logger.error(f"Error al verificar el pool de conexiones: {str(e)}")
+    
+    yield  # Aquí se ejecuta la aplicación
+    
+    # Código que se ejecuta al cerrar la aplicación
+    logger.info("Cerrando aplicación...")
+    try:
+        close_pool()
+        logger.info("Recursos liberados correctamente")
+    except Exception as e:
+        logger.error(f"Error al liberar recursos: {str(e)}")
 
-
-
-
-app = FastAPI(title="Campus Virtual API", description="Backend API para Campus Virtual")
-
+# Crear la aplicación FastAPI con el lifespan
+app = FastAPI(
+    title="Campus Virtual API", 
+    description="Backend API para Campus Virtual",
+    lifespan=lifespan
+)
 
 # Configurar CORS
-origins = [
-    "http://localhost",
-    "http://localhost:3000",
-    "http://localhost:8000",
-    "http://127.0.0.1:3000",
-    # Añadir aquí los dominios de producción cuando corresponda
-]
-
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["*"],  # En producción, especificar dominios permitidos
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Logging middleware para registrar todas las solicitudes
+# Middleware para logging de solicitudes
 @app.middleware("http")
-async def log_requests(request, call_next):
+async def log_requests(request: Request, call_next):
     logger.info(f"Request: {request.method} {request.url}")
-    response = await call_next(request)
-    logger.info(f"Response status: {response.status_code}")
-    return response
+    try:
+        response = await call_next(request)
+        logger.info(f"Response status: {response.status_code}")
+        return response
+    except Exception as e:
+        logger.error(f"Error processing request: {str(e)}")
+        raise
 
-# Añadir la ruta de GraphQL con la versión personalizada que hace logging de errores
-# graphql_app = CustomGraphQL(schema)
-# app.add_route("/graphql", graphql_app)
-# app.add_websocket_route("/graphql", graphql_app)
+# Añadir la ruta GraphQL
+graphql_router = GraphQLRouter(schema)
+app.include_router(graphql_router, prefix="/graphql")
 
+# Rutas existentes para login
 @app.post("/api/login", response_model=LoginResponse)
 async def login_endpoint(request: Request, login_data: LoginRequest):
     return await login(login_data, request)
@@ -74,18 +90,22 @@ async def update_password_endpoint(update_data: UpdatePasswordRequest):
 async def reset_all_passwords_endpoint(update_data: BulkPasswordUpdateRequest):
     return await reset_all_passwords(update_data)
 
-# app.include_router(rest_router)
+# Ruta de verificación de estado
+@app.get("/health")
+def health_check():
+    return {"status": "ok", "message": "API funcionando correctamente"}
 
+# Ruta raíz
 @app.get("/")
 def read_root():
     logger.info("Acceso a la ruta raíz")
     return {
         "message": "Bienvenido a la API del Campus Virtual",
-        # "docs": "/docs"
+        "docs": "/docs",
+        "graphql": "/graphql"
     }
 
-
+# Punto de entrada para ejecución directa
 if __name__ == "__main__":
-    import uvicorn
     logger.info("Iniciando servidor...")
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
