@@ -105,33 +105,33 @@ export default function () {
 function testGetEndpoints() {
   // Grupo de operaciones GET para APIs más utilizadas
   let responses = {
-    home: http.get("http://app:8000/"),
-    users: http.get("http://app:8000/api/users"),
-    categories: http.get("http://app:8000/api/categories"),
-    roles: http.get("http://app:8000/api/roles"),
-    courses: http.get("http://app:8000/api/courses"),
-    assignments: http.get(`http://app:8000/api/assignments/${testData.existingAssignmentId}`),
+    home: http.get("http://40.69.163.167:8000/"),
+    users: http.get("http://40.69.163.167:8000/api/users"),
+    categories: http.get("http://40.69.163.167:8000/api/categories"),
+    roles: http.get("http://40.69.163.167:8000/api/roles"),
+    courses: http.get("http://40.69.163.167:8000/api/courses"),
+    assignments: http.get(`http://40.69.163.167:8000/api/assignments/${testData.existingAssignmentId}`),
     // La versión "assignmentsProx" no tiene equivalente directo en los nuevos endpoints, 
     // usaremos el endpoint general de assignments
-    assignmentsProx: http.get("http://app:8000/api/assignments"),
-    sections: http.get("http://app:8000/api/sections")
+    assignmentsProx: http.get("http://40.69.163.167:8000/api/assignments"),
+    sections: http.get("http://40.69.163.167:8000/api/sections")
   };
   
   // Grupo de operaciones GET para APIs menos utilizadas (con probabilidad)
   if (Math.random() < 0.3) {
-    responses.userById = http.get(`http://app:8000/api/users/${testData.existingUserId}`);
-    responses.rolById = http.get(`http://app:8000/api/roles/${randomIntBetween(1, 5)}`);
-    responses.courseById = http.get(`http://app:8000/api/courses/${testData.existingCourseId}`);
-    responses.courseSections = http.get(`http://app:8000/api/sections/${testData.existingCourseId}`);
-    responses.cursoAssignments = http.get(`http://app:8000/api/courses/${testData.existingCourseId}/assignments`);
+    responses.userById = http.get(`http://40.69.163.167:8000/api/users/${testData.existingUserId}`);
+    responses.rolById = http.get(`http://40.69.163.167:8000/api/roles/${randomIntBetween(1, 5)}`);
+    responses.courseById = http.get(`http://40.69.163.167:8000/api/courses/${testData.existingCourseId}`);
+    responses.courseSections = http.get(`http://40.69.163.167:8000/api/sections/${testData.existingCourseId}`);
+    responses.cursoAssignments = http.get(`http://40.69.163.167:8000/api/courses/${testData.existingCourseId}/assignments`);
     // Para asignaciones por sección, no hay endpoint directo, usamos el de curso
-    responses.seccionAssignments = http.get(`http://app:8000/api/courses/${testData.existingCourseId}/assignments`);
+    responses.seccionAssignments = http.get(`http://40.69.163.167:8000/api/courses/${testData.existingCourseId}/assignments`);
     // Para todas las asignaciones, usamos el endpoint general
-    responses.allAssignments = http.get("http://app:8000/api/assignments");
-    responses.enrollmentsByCourse = http.get(`http://app:8000/api/courses/${testData.existingCourseId}/enrollments`);
-    responses.enrollmentsByUser = http.get(`http://app:8000/api/users/${testData.existingUserId}/enrollments`);
-    responses.submissionsByAssignment = http.get(`http://app:8000/api/assignments/${testData.existingAssignmentId}/submissions`);
-    responses.submissionsByUser = http.get(`http://app:8000/api/users/${testData.existingUserId}/submissions`);
+    responses.allAssignments = http.get("http://40.69.163.167:8000/api/assignments");
+    responses.enrollmentsByCourse = http.get(`http://40.69.163.167:8000/api/courses/${testData.existingCourseId}/enrollments`);
+    responses.enrollmentsByUser = http.get(`http://40.69.163.167:8000/api/users/${testData.existingUserId}/enrollments`);
+    responses.submissionsByAssignment = http.get(`http://40.69.163.167:8000/api/assignments/${testData.existingAssignmentId}/submissions`);
+    responses.submissionsByUser = http.get(`http://40.69.163.167:8000/api/users/${testData.existingUserId}/submissions`);
   }
   
   // Verificar respuestas de las operaciones principales
@@ -265,37 +265,37 @@ function testPostEndpoints() {
   
   // Utilizamos una estrategia aleatoria para no crear demasiados recursos en cada ejecución
   if (Math.random() < 0.3) {
-    responses.assignment = http.post(`http://app:8000/api/courses/${testData.existingCourseId}/assignments`, JSON.stringify(assignmentPayload), {
+    responses.assignment = http.post(`http://40.69.163.167:8000/api/courses/${testData.existingCourseId}/assignments`, JSON.stringify(assignmentPayload), {
       headers: { "Content-Type": "application/json" }
     });
   }
   
   if (Math.random() < 0.2) {
-    responses.course = http.post("http://app:8000/api/courses", JSON.stringify(coursePayload), {
+    responses.course = http.post("http://40.69.163.167:8000/api/courses", JSON.stringify(coursePayload), {
       headers: { "Content-Type": "application/json" }
     });
   }
   
   if (Math.random() < 0.3) {
-    responses.enrollment = http.post("http://app:8000/api/enrollments", JSON.stringify(enrollmentPayload), {
+    responses.enrollment = http.post("http://40.69.163.167:8000/api/enrollments", JSON.stringify(enrollmentPayload), {
       headers: { "Content-Type": "application/json" }
     });
   }
   
   if (Math.random() < 0.2) {
-    responses.rol = http.post("http://app:8000/api/roles", JSON.stringify(rolPayload), {
+    responses.rol = http.post("http://40.69.163.167:8000/api/roles", JSON.stringify(rolPayload), {
       headers: { "Content-Type": "application/json" }
     });
   }
   
   if (Math.random() < 0.3) {
-    responses.section = http.post("http://app:8000/api/sections", JSON.stringify(sectionPayload), {
+    responses.section = http.post("http://40.69.163.167:8000/api/sections", JSON.stringify(sectionPayload), {
       headers: { "Content-Type": "application/json" }
     });
   }
   
   if (Math.random() < 0.3) {
-    responses.submission = http.post(`http://app:8000/api/assignments/${testData.existingAssignmentId}/submissions`, JSON.stringify(submissionPayload), {
+    responses.submission = http.post(`http://40.69.163.167:8000/api/assignments/${testData.existingAssignmentId}/submissions`, JSON.stringify(submissionPayload), {
       headers: { "Content-Type": "application/json" }
     });
   }
@@ -445,7 +445,7 @@ function testPutEndpoints() {
   }
   
   if (Math.random() < 0.25) {
-    responses.assignment = http.put(`http://app:8000/api/assignments/${targetId}`, JSON.stringify(assignmentPayload), {
+    responses.assignment = http.put(`http://40.69.163.167:8000/api/assignments/${targetId}`, JSON.stringify(assignmentPayload), {
       headers: { "Content-Type": "application/json" }
     });
   }
@@ -458,7 +458,7 @@ function testPutEndpoints() {
   }
   
   if (Math.random() < 0.25) {
-    responses.course = http.put(`http://app:8000/api/courses/${targetId}`, JSON.stringify(coursePayload), {
+    responses.course = http.put(`http://40.69.163.167:8000/api/courses/${targetId}`, JSON.stringify(coursePayload), {
       headers: { "Content-Type": "application/json" }
     });
   }
@@ -468,7 +468,7 @@ function testPutEndpoints() {
     targetId = testData.createdEnrollmentId;
     
     if (Math.random() < 0.25) {
-      responses.enrollment = http.put(`http://app:8000/api/enrollments/${targetId}`, JSON.stringify(enrollmentPayload), {
+      responses.enrollment = http.put(`http://40.69.163.167:8000/api/enrollments/${targetId}`, JSON.stringify(enrollmentPayload), {
         headers: { "Content-Type": "application/json" }
       });
     }
@@ -482,7 +482,7 @@ function testPutEndpoints() {
   }
   
   if (Math.random() < 0.25) {
-    responses.section = http.put(`http://app:8000/api/sections/${targetId}`, JSON.stringify(sectionPayload), {
+    responses.section = http.put(`http://40.69.163.167:8000/api/sections/${targetId}`, JSON.stringify(sectionPayload), {
       headers: { "Content-Type": "application/json" }
     });
   }
@@ -524,27 +524,27 @@ function testDeleteEndpoints() {
   
   // Solo realizamos operaciones DELETE en elementos que hemos creado durante la prueba
   if (testData.createdSubmissionId > 0 && Math.random() < 0.2) {
-    responses.submission = http.del(`http://app:8000/api/submissions/${testData.createdSubmissionId}`);
+    responses.submission = http.del(`http://40.69.163.167:8000/api/submissions/${testData.createdSubmissionId}`);
     testData.createdSubmissionId = 0; // Limpiamos el ID después de eliminar
   }
   
   if (testData.createdEnrollmentId > 0 && Math.random() < 0.2) {
-    responses.enrollment = http.del(`http://app:8000/api/enrollments/${testData.createdEnrollmentId}`);
+    responses.enrollment = http.del(`http://40.69.163.167:8000/api/enrollments/${testData.createdEnrollmentId}`);
     testData.createdEnrollmentId = 0;
   }
   
   if (testData.createdSectionId > 0 && Math.random() < 0.2) {
-    responses.section = http.del(`http://app:8000/api/sections/${testData.createdSectionId}`);
+    responses.section = http.del(`http://40.69.163.167:8000/api/sections/${testData.createdSectionId}`);
     testData.createdSectionId = 0;
   }
   
   if (testData.createdRolId > 0 && Math.random() < 0.2) {
-    responses.rol = http.del(`http://app:8000/api/roles/${testData.createdRolId}`);
+    responses.rol = http.del(`http://40.69.163.167:8000/api/roles/${testData.createdRolId}`);
     testData.createdRolId = 0;
   }
   
   if (testData.createdAssignmentId > 0 && Math.random() < 0.2) {
-    responses.assignment = http.del(`http://app:8000/api/assignments/${testData.createdAssignmentId}`);
+    responses.assignment = http.del(`http://40.69.163.167:8000/api/assignments/${testData.createdAssignmentId}`);
     testData.createdAssignmentId = 0;
   }
   
