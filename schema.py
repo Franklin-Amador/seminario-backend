@@ -48,7 +48,19 @@ class Query:
             if not rows:
                 logger.error(f"Usuario no encontrado: {user_id}")
                 raise Exception("Usuario no encontrado")
-            return User(**row_to_dict(rows[0]))
+            
+            # Convertir los datos y manejar el caso del password
+            user_data = row_to_dict(rows[0])
+            
+            # Si existe la contraseña en los datos pero no queremos exponerla
+            # (la clase User debe estar preparada para recibir password en su constructor)
+            if 'password' in user_data:
+                # Pasamos todos los datos incluyendo password al constructor
+                # La clase User sabe que no debe exponer este campo
+                return User(**user_data)
+            else:
+                # Si no hay password, simplemente pasamos los datos tal cual
+                return User(**user_data)
         except Exception as e:
             logger.error(f"Error al obtener usuario {user_id}: {str(e)}")
             raise

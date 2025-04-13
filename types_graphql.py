@@ -17,6 +17,39 @@ class User:
     department: Optional[str]
     timecreated: datetime
     timemodified: datetime
+    
+    # No exponemos password en el API pero permitimos inicializarlo
+    def __init__(
+        self, 
+        id: int, 
+        username: str, 
+        firstname: str, 
+        lastname: str, 
+        email: str, 
+        confirmed: bool, 
+        deleted: bool, 
+        suspended: bool, 
+        institution: Optional[str], 
+        department: Optional[str], 
+        timecreated: datetime, 
+        timemodified: datetime, 
+        password: Optional[str] = None, 
+        **kwargs
+    ):
+        self.id = id
+        self.username = username
+        self.firstname = firstname
+        self.lastname = lastname
+        self.email = email
+        self.confirmed = confirmed
+        self.deleted = deleted
+        self.suspended = suspended
+        self.institution = institution
+        self.department = department
+        self.timecreated = timecreated
+        self.timemodified = timemodified
+        # No guardamos la contraseña como atributo público
+        # pero permitimos recibirla en el constructor
 
 # Course Types
 @strawberry.type

@@ -39,13 +39,30 @@ def close_pool():
         pool.closeall()
         logger.info("Pool de conexiones cerrado correctamente")
 
-def row_to_dict(row):
+def row_to_dict(row, exclude_fields=None):
     """
     Convierte una fila de RealDictCursor a un diccionario estándar de Python.
+    Opcionalmente excluye campos específicos.
+    
+    Args:
+        row: Fila de resultado de base de datos
+        exclude_fields (list): Lista de nombres de campos a excluir
+    
+    Returns:
+        dict: Diccionario con los datos de la fila o None si la fila es None
     """
     if row is None:
         return None
-    return dict(row)
+    
+    if exclude_fields is None:
+        return dict(row)
+    
+    result = {}
+    for key, value in row.items():
+        if key not in exclude_fields:
+            result[key] = value
+    
+    return result
 
 def rows_to_list(rows):
     """
