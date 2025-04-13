@@ -13,7 +13,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Obtener cadena de conexión directamente
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/campus_virtual")
+DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://admin:root1234@localhost:5433/campus_virtual")
 
 # Verificar la conexión al inicio
 try:

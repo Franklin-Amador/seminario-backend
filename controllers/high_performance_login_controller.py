@@ -15,7 +15,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Crear pool de conexiones para mejor rendimiento
-DATABASE_URL = os.getenv("DATABASE_URL")
+DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://admin:root1234@localhost:5433/campus_virtual")
 pool = ThreadedConnectionPool(minconn=5, maxconn=20, dsn=DATABASE_URL)
 
 @contextmanager

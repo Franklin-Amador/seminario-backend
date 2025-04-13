@@ -4,6 +4,10 @@ from contextlib import asynccontextmanager
 from strawberry.fastapi import GraphQLRouter
 import uvicorn
 import logging
+from dotenv import load_dotenv
+
+# Cargar variables de entorno desde el archivo .env
+load_dotenv()
 
 # Importar los controladores existentes
 from controllers.high_performance_login_controller import login, update_password, reset_all_passwords
