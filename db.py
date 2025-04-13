@@ -1,8 +1,17 @@
 import os
 import psycopg2
 from psycopg2.extras import RealDictCursor
+from psycopg2.pool import SimpleConnectionPool
 from dotenv import load_dotenv
 from contextlib import contextmanager
+import logging
+
+# Configurar logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+)
+logger = logging.getLogger(__name__)
 
 # Cargar variables de entorno
 load_dotenv()
@@ -10,6 +19,79 @@ load_dotenv()
 # Obtener la URL de conexión desde variables de entorno
 DATABASE_URL = os.getenv("DATABASE_URL")
 
+# Crear un pool de conexiones para mejor rendimiento
+try:
+    pool = SimpleConnectionPool(
+        minconn=1,
+        maxconn=10,
+        dsn=DATABASE_URL
+    )
+    logger.info("Pool de conexiones inicializado correctamente")
+except Exception as e:
+    pool = None
+    logger.error(f"Error al inicializar el pool de conexiones: {str(e)}")
+
+def close_pool():
+    """
+    Cierra el pool de conexiones cuando la aplicación se apaga.
+    """
+    if pool:
+        pool.closeall()
+        logger.info("Pool de conexiones cerrado correctamente")
+
+def row_to_dict(row):
+    """
+    Convierte una fila de RealDictCursor a un diccionario estándar de Python.
+    """
+    if row is None:
+        return None
+    return dict(row)
+
+def rows_to_list(rows):
+    """
+    Convierte una lista de filas a una lista de diccionarios.
+    """
+    if rows is None:
+        return []
+    return [row_to_dict(row) for row in rows]
+
+@contextmanager
+def get_connection():
+    """
+    Administra conexiones a la base de datos desde el pool.
+    Utiliza un contextmanager para asegurar que las conexiones son devueltas al pool.
+    """
+    if pool is None:
+        raise Exception("Pool de conexiones no inicializado")
+    
+    conn = pool.getconn()
+    try:
+        # Configurar la conexión para usar RealDictCursor por defecto
+        conn.cursor_factory = RealDictCursor
+        yield conn
+    finally:
+        pool.putconn(conn)
+
+@contextmanager
+def get_cursor(commit=False):
+    """
+    Proporciona un cursor con manejo automático de la conexión.
+    """
+    with get_connection() as conn:
+        # Configurar autocommit en False para manejar transacciones manualmente
+        conn.autocommit = False
+        cursor = conn.cursor()
+        try:
+            yield cursor
+            if commit:
+                conn.commit()
+        except Exception as e:
+            conn.rollback()
+            raise e
+        finally:
+            cursor.close()
+
+# Compatibilidad con el código anterior
 @contextmanager
 def get_db_connection():
     """
@@ -194,3 +276,86 @@ def clean_db_results(results):
         serializable = json.loads(json.dumps(dict(results), cls=CustomJSONEncoder))
     
     return serializable
+
+# Clase Database para compatibilidad con schema.py
+class Database:
+    @staticmethod
+    def get_pool():
+        return pool
+    
+    @staticmethod
+    def execute(query, params=None, fetch=False):
+        """
+        Ejecuta una consulta SQL.
+        
+        Args:
+            query (str): Consulta SQL a ejecutar
+            params (tuple, optional): Parámetros para la consulta
+            fetch (bool): Si es True, devuelve los resultados
+            
+        Returns:
+            list: Lista de diccionarios con los resultados o None
+        """
+        with get_cursor(commit=not fetch) as cursor:
+            try:
+                cursor.execute(query, params)
+                if fetch:
+                    return cursor.fetchall()
+                return cursor.rowcount
+            except Exception as e:
+                logger.error(f"Error al ejecutar consulta: {str(e)}")
+                raise
+    
+    @staticmethod
+    def execute_proc(proc_name, *args):
+        """
+        Ejecuta un procedimiento almacenado que devuelve resultados.
+        
+        Args:
+            proc_name (str): Nombre del procedimiento almacenado
+            *args: Argumentos para el procedimiento
+            
+        Returns:
+            list: Lista de diccionarios con los resultados
+        """
+        with get_cursor() as cursor:
+            try:
+                # Construir la consulta para llamar al procedimiento
+                query = f"SELECT * FROM {proc_name}("
+                if args:
+                    placeholders = ", ".join(["%s" for _ in range(len(args))])
+                    query += placeholders
+                query += ")"
+                
+                cursor.execute(query, args if args else None)
+                return cursor.fetchall()
+            except Exception as e:
+                logger.error(f"Error al ejecutar procedimiento {proc_name}: {str(e)}")
+                raise
+    
+    @staticmethod
+    def execute_proc_transaction(proc_name, *args):
+        """
+        Ejecuta un procedimiento almacenado dentro de una transacción.
+        
+        Args:
+            proc_name (str): Nombre del procedimiento almacenado
+            *args: Argumentos para el procedimiento
+            
+        Returns:
+            list: Lista de diccionarios con los resultados
+        """
+        with get_cursor(commit=True) as cursor:
+            try:
+                # Construir la consulta para llamar al procedimiento
+                query = f"SELECT * FROM {proc_name}("
+                if args:
+                    placeholders = ", ".join(["%s" for _ in range(len(args))])
+                    query += placeholders
+                query += ")"
+                
+                cursor.execute(query, args if args else None)
+                return cursor.fetchall()
+            except Exception as e:
+                logger.error(f"Error al ejecutar procedimiento {proc_name} en transacción: {str(e)}")
+                raise
