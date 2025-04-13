@@ -117,7 +117,12 @@ services:
       - ./tests:/tests
     entrypoint: ["k6"]
     command:
-      ["run", "--out", "csv=/tests/test_results.csv", "/tests/test_script.js"]
+      [
+        "run",
+        "--out=influxdb=http://influxdb:8086/k6",
+        "csv=/tests/test_results.csv",
+        "/tests/test_script.js",
+      ]
     depends_on:
       - app
       - influxdb
