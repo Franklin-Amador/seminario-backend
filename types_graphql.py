@@ -62,9 +62,12 @@ class Course:
     idnumber: Optional[str]
     summary: Optional[str]
     format: str
+    showgrades: bool
+    newsitems: int
     startdate: datetime
     enddate: Optional[datetime]
     visible: bool
+    groupmode: int
     timecreated: datetime
     timemodified: datetime
 
@@ -77,6 +80,7 @@ class CourseSection:
     summary: Optional[str]
     sequence: Optional[str]
     visible: bool
+    availability: Optional[str]
     timemodified: datetime
 
 @strawberry.type
@@ -87,15 +91,22 @@ class Category:
     description: Optional[str]
     parent: int
     sortorder: int
+    coursecount: int
     visible: bool
+    visibleold: bool
+    timemodified: datetime
     depth: int
     path: str
+    theme: Optional[str]
 
 # Module Types
 @strawberry.type
 class Module:
     id: int
     name: str
+    cron: int
+    lastcron: Optional[datetime]
+    search: Optional[str]
     visible: bool
 
 @strawberry.type
@@ -107,7 +118,19 @@ class CourseModule:
     section: int
     idnumber: Optional[str]
     added: datetime
+    score: int
+    indent: int
     visible: bool
+    visibleoncoursepage: bool
+    visibleold: bool
+    groupmode: int
+    groupingid: int
+    completion: int
+    completiongradeitemnumber: Optional[int]
+    completionview: bool
+    completionexpected: Optional[datetime]
+    availability: Optional[str]
+    showdescription: bool
 
 # Role Types
 @strawberry.type
@@ -122,9 +145,8 @@ class Role:
 @strawberry.type
 class UserRole:
     id: int
-    roleid: int
-    contextid: int
     userid: int
+    roleid: int
     timemodified: datetime
 
 # Assignment Types
@@ -134,21 +156,40 @@ class Assignment:
     course: int
     name: str
     intro: str
+    introformat: int
     section: int
+    alwaysshowdescription: bool
+    nosubmissions: bool
+    submissiondrafts: bool
+    sendnotifications: bool
+    sendlatenotifications: bool
     duedate: Optional[datetime]
     allowsubmissionsfromdate: Optional[datetime]
     grade: Optional[int]
     timemodified: datetime
-    
+    requiresubmissionstatement: bool
+    completionsubmit: bool
+    cutoffdate: Optional[datetime]
+    gradingduedate: Optional[datetime]
+    teamsubmission: bool
+    requireallteammemberssubmit: bool
+    teamsubmissiongroupingid: int
+    blindmarking: bool
+    revealidentities: bool
+    attemptreopenmethod: str
+    maxattempts: int
+    markingworkflow: bool
+    markingallocation: bool
 @strawberry.type
 class Section:
     id: int
     course: int
     section: int
-    name: str
+    name: Optional[str]
     summary: Optional[str]
     sequence: Optional[str]
     visible: bool
+    availability: Optional[str]
     timemodified: datetime
 
 @strawberry.type
@@ -159,6 +200,7 @@ class Submission:
     timecreated: datetime
     timemodified: datetime
     status: str
+    groupid: int
     attemptnumber: int
     latest: bool
 
@@ -170,7 +212,25 @@ class Forum:
     type: str
     name: str
     intro: str
+    introformat: int
+    assessed: int
+    assesstimestart: Optional[datetime]
+    assesstimefinish: Optional[datetime]
+    scale: int
+    maxbytes: int
+    maxattachments: int
+    forcesubscribe: int
+    trackingtype: int
+    rsstype: int
+    rssarticles: int
     timemodified: datetime
+    warnafter: int
+    blockafter: int
+    blockperiod: int
+    completiondiscussions: int
+    completionreplies: int
+    completionposts: int
+    displaywordcount: bool
 
 @strawberry.type
 class ForumDiscussion:
@@ -178,8 +238,15 @@ class ForumDiscussion:
     course: int
     forum: int
     name: str
+    firstpost: int
     userid: int
+    groupid: int
+    assessed: bool
     timemodified: datetime
+    usermodified: int
+    timestart: Optional[datetime]
+    timeend: Optional[datetime]
+    pinned: bool
 
 @strawberry.type
 class ForumPost:
@@ -189,19 +256,47 @@ class ForumPost:
     userid: int
     created: datetime
     modified: datetime
+    mailed: int
     subject: str
     message: str
+    messageformat: int
+    messagetrust: int
+    attachment: Optional[str]
+    totalscore: int
+    mailnow: int
 
 # Grade Types
 @strawberry.type
 class GradeItem:
     id: int
     courseid: int
+    categoryid: Optional[int]
     itemname: Optional[str]
     itemtype: str
     itemmodule: Optional[str]
-    grademax: int
-    grademin: int
+    iteminstance: Optional[int]
+    itemnumber: Optional[int]
+    iteminfo: Optional[str]
+    idnumber: Optional[str]
+    calculation: Optional[str]
+    gradetype: int
+    grademax: float
+    grademin: float
+    scaleid: Optional[int]
+    outcomeid: Optional[int]
+    gradepass: float
+    multfactor: float
+    plusfactor: float
+    aggregationcoef: float
+    aggregationcoef2: float
+    sortorder: int
+    display: int
+    decimals: Optional[int]
+    hidden: int
+    locked: int
+    locktime: Optional[datetime]
+    needsupdate: int
+    weightoverride: int
     timecreated: datetime
     timemodified: datetime
 
@@ -211,7 +306,19 @@ class Grade:
     itemid: int
     userid: int
     rawgrade: Optional[int]
+    rawgrademax: int
+    rawgrademin: int
     finalgrade: Optional[int]
+    hidden: int
+    locked: int
+    locktime: Optional[datetime]
+    exported: int
+    overridden: int
+    excluded: int
+    feedback: Optional[str]
+    feedbackformat: int
+    information: Optional[str]
+    informationformat: int
     timecreated: datetime
     timemodified: datetime
 
@@ -222,7 +329,7 @@ class Enrollment:
     enrolid: int
     userid: int
     courseid: int
-    course: Optional[Course] = None
+    # course: Optional["Course"] = None  # Relación opcional a Course
     status: int
     timestart: Optional[datetime]
     timeend: Optional[datetime]
@@ -237,6 +344,7 @@ class CourseCompletion:
     timeenrolled: datetime
     timestarted: datetime
     timecompleted: Optional[datetime]
+    reaggregate: Optional[datetime]
 
 # Error types para manejo de errores
 @strawberry.type
