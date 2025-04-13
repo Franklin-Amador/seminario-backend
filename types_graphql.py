@@ -70,6 +70,21 @@ class Course:
     groupmode: int
     timecreated: datetime
     timemodified: datetime
+@strawberry.type
+class CourseEnrollment:
+    id: int  # Este id corresponde a c.id en la base de datos
+    category: int
+    sortorder: int
+    fullname: str
+    shortname: str
+    idnumber: Optional[str]
+    summary: Optional[str]
+    format: str
+    startdate: datetime
+    enddate: Optional[datetime]
+    visible: bool
+    timecreated: datetime # Corregido para coincidir con la base de datos
+    timemodified: datetime # Corregido para coincidir con la base de datos
 
 @strawberry.type
 class CourseSection:
@@ -329,7 +344,7 @@ class Enrollment:
     enrolid: int
     userid: int
     courseid: int
-    # course: Optional["Course"] = None  # Relación opcional a Course
+    course: Optional["CourseEnrollment"] = None  # Relación opcional a Course
     status: int
     timestart: Optional[datetime]
     timeend: Optional[datetime]

@@ -10,7 +10,7 @@ import logging
 
 # Importar los tipos definidos
 from types_graphql import (
-    User, Course, CourseSection, Category, Module, CourseModule,
+    CourseEnrollment, User, Course, CourseSection, Category, Module, CourseModule,
     Role, UserRole, Assignment, Section, Submission, Forum,
     ForumDiscussion, ForumPost, GradeItem, Grade, Enrollment,
     CourseCompletion, ErrorResponse, UserResponse, RoleInput,
@@ -271,16 +271,14 @@ class Query:
     def user_enrollments(self, user_id: int) -> List[Enrollment]:
         try:
             rows = Database.execute_proc("get_enrollments_by_user", user_id)
-            
-            # Los resultados contienen campos del curso y de la inscripción juntos
+
             enrollments = []
-            
             for row in rows:
                 row_dict = row_to_dict(row)
-                
+
                 # Separar los campos del curso
                 course_data = {
-                    "id": row_dict["course_id"],
+                    "id": row_dict["course_id"], # Usar course_id
                     "category": row_dict["category"],
                     "sortorder": row_dict["sortorder"],
                     "fullname": row_dict["fullname"],
@@ -291,30 +289,28 @@ class Query:
                     "startdate": row_dict["startdate"],
                     "enddate": row_dict["enddate"],
                     "visible": row_dict["visible"],
-                    "timecreated": row_dict["course_timecreated"],
-                    "timemodified": row_dict["course_timemodified"]
+                    "timecreated": row_dict["course_timecreated"], # Usar course_timecreated
+                    "timemodified": row_dict["course_timemodified"] # Usar course_timemodified
                 }
-                
-                # Crear el objeto Enrollment con el curso incluido
+
                 enrollment_data = {
                     "id": row_dict["id"],
                     "enrolid": row_dict["enrolid"],
                     "userid": row_dict["userid"],
                     "courseid": row_dict["courseid"],
-                    "course": Course(**course_data),
+                    "course": CourseEnrollment(**course_data),
                     "status": row_dict["status"],
                     "timestart": row_dict["timestart"],
                     "timeend": row_dict["timeend"],
                     "timecreated": row_dict["timecreated"],
                     "timemodified": row_dict["timemodified"]
                 }
-                
                 enrollments.append(Enrollment(**enrollment_data))
-                
             return enrollments
         except Exception as e:
             logger.error(f"Error al obtener inscripciones del usuario {user_id}: {str(e)}")
             raise Exception("Error al obtener inscripciones del usuario")
+
 
     @strawberry.field
     def course_completions(self, course_id: int) -> List[CourseCompletion]:
