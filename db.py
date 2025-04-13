@@ -1,207 +1,196 @@
 import os
-import logging
 import psycopg2
 from psycopg2.extras import RealDictCursor
-from psycopg2.pool import SimpleConnectionPool
+from dotenv import load_dotenv
 from contextlib import contextmanager
 
-# Configuración de logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-)
-logger = logging.getLogger(__name__)
+# Cargar variables de entorno
+load_dotenv()
 
-# Obtener cadena de conexión directamente
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://admin:root1234@localhost:5433/campus_virtual")
-
-# Verificar la conexión al inicio
-try:
-    # Conexión de prueba para verificar
-    conn = psycopg2.connect(DATABASE_URL)
-    conn.close()
-    logger.info("Conexión a la base de datos verificada correctamente")
-except Exception as e:
-    logger.error(f"Error al conectar a la base de datos: {str(e)}")
-    # No raise para permitir que la aplicación inicie aunque la BD no esté disponible inicialmente
-
-# Crear un pool de conexiones para mejor rendimiento
-pool = None
-try:
-    pool = SimpleConnectionPool(
-        minconn=1,
-        maxconn=10,
-        dsn=DATABASE_URL
-    )
-    logger.info("Pool de conexiones creado correctamente")
-except Exception as e:
-    logger.error(f"Error al crear el pool de conexiones: {str(e)}")
+# Obtener la URL de conexión desde variables de entorno
+DATABASE_URL = os.getenv("DATABASE_URL")
 
 @contextmanager
-def get_connection():
+def get_db_connection():
     """
-    Administra conexiones a la base de datos desde el pool.
-    Utiliza un contextmanager para asegurar que las conexiones son devueltas al pool.
+    Contexto para gestionar la conexión a la base de datos.
+    Abre la conexión, ejecuta las operaciones y la cierra automáticamente.
     """
-    global pool
-    if pool is None:
-        try:
-            pool = SimpleConnectionPool(
-                minconn=1,
-                maxconn=10,
-                dsn=DATABASE_URL
-            )
-            logger.info("Pool de conexiones creado correctamente (reintentar)")
-        except Exception as e:
-            logger.error(f"Error al crear el pool de conexiones (reintentar): {str(e)}")
-            raise
-
-    conn = pool.getconn()
+    conn = None
     try:
-        # Configurar la conexión para usar RealDictCursor por defecto
-        conn.cursor_factory = RealDictCursor
+        # Establecer la conexión
+        conn = psycopg2.connect(DATABASE_URL)
+        # Devolver la conexión para uso dentro del bloque with
         yield conn
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        raise e
     finally:
-        pool.putconn(conn)
+        if conn:
+            conn.close()
 
 @contextmanager
-def get_cursor():
+def get_db_cursor(commit=False):
     """
-    Proporciona un cursor con manejo automático de la conexión.
+    Contexto para gestionar el cursor de la base de datos.
+    Permite ejecutar consultas SQL y obtener los resultados.
+    
+    Args:
+        commit (bool): Si es True, hace commit de la transacción al finalizar.
     """
-    with get_connection() as conn:
-        # Configurar autocommit en False para manejar transacciones manualmente
-        conn.autocommit = False
-        cursor = conn.cursor()
+    with get_db_connection() as conn:
+        # Crear un cursor que devuelva resultados como diccionarios
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
         try:
+            # Devolver el cursor para uso dentro del bloque with
             yield cursor
-            conn.commit()
+            if commit:
+                conn.commit()
         except Exception as e:
             conn.rollback()
-            logger.error(f"Error en transacción: {str(e)}")
-            raise
+            raise e
         finally:
             cursor.close()
 
-def close_pool():
+# Función para ejecutar una consulta que devuelve resultados
+def fetch_data(query, params=None):
     """
-    Cierra el pool de conexiones cuando la aplicación se apaga.
-    """
-    global pool
-    if pool:
-        pool.closeall()
-        pool = None
-        logger.info("Pool de conexiones cerrado")
-
-class Database:
-    """
-    Clase que proporciona métodos para interactuar con la base de datos.
-    """
+    Ejecuta una consulta SQL y devuelve los resultados.
     
-    @classmethod
-    def execute(cls, query: str, *args, fetch=False):
-        """
-        Ejecuta una consulta SQL y opcionalmente devuelve resultados.
+    Args:
+        query (str): Consulta SQL a ejecutar
+        params (tuple, optional): Parámetros para la consulta
         
-        Args:
-            query (str): La consulta SQL a ejecutar
-            *args: Parámetros posicionales para la consulta
-            fetch (bool): Si es True, devuelve los resultados
-            
-        Returns:
-            List[Dict] o None: Resultados de la consulta o None
-        """
-        try:
-            with get_cursor() as cursor:
-                cursor.execute(query, args)
-                if fetch:
-                    return cursor.fetchall()
-                return None
-        except Exception as e:
-            logger.error(f"Error ejecutando query: {query}, error: {str(e)}")
-            raise
-
-    @classmethod
-    def execute_proc(cls, proc_name: str, *args):
-        """
-        Ejecuta un procedimiento almacenado y devuelve los resultados.
-        
-        Args:
-            proc_name (str): Nombre del procedimiento almacenado
-            *args: Parámetros posicionales para el procedimiento
-            
-        Returns:
-            List[Dict]: Resultados del procedimiento
-        """
-        try:
-            # Construir la llamada al procedimiento
-            placeholders = ", ".join(["%s" for _ in range(len(args))])
-            query = f"SELECT * FROM {proc_name}({placeholders})"
-            
-            logger.info(f"Ejecutando procedimiento: {query}")
-            
-            with get_cursor() as cursor:
-                cursor.execute(query, args)
-                return cursor.fetchall()
-        except Exception as e:
-            logger.error(f"Error ejecutando procedimiento {proc_name}: {str(e)}")
-            raise
-
-    @classmethod
-    def execute_proc_transaction(cls, proc_name: str, *args):
-        """
-        Ejecuta un procedimiento almacenado dentro de una transacción explícita.
-        
-        Args:
-            proc_name (str): Nombre del procedimiento almacenado
-            *args: Parámetros posicionales para el procedimiento
-            
-        Returns:
-            List[Dict]: Resultados del procedimiento
-        """
-        try:
-            # Construir la llamada al procedimiento
-            placeholders = ", ".join(["%s" for _ in range(len(args))])
-            query = f"SELECT * FROM {proc_name}({placeholders})"
-            
-            logger.info(f"Ejecutando procedimiento en transacción: {query}")
-            
-            with get_connection() as conn:
-                conn.autocommit = False
-                with conn.cursor() as cursor:
-                    cursor.execute(query, args)
-                    result = cursor.fetchall()
-                    conn.commit()
-                    return result
-        except Exception as e:
-            logger.error(f"Error ejecutando procedimiento {proc_name} en transacción: {str(e)}")
-            raise
-
-    @classmethod
-    def get_pool(cls):
-        """
-        Devuelve el pool existente.
-        """
-        global pool
-        return pool
-
-# Función de ayuda para convertir filas a diccionarios
-def row_to_dict(row):
+    Returns:
+        list: Lista de diccionarios con los resultados
     """
-    Convierte una fila de psycopg2 (ya es un diccionario con RealDictCursor) a un diccionario.
-    Esta función se mantiene por compatibilidad, pero con RealDictCursor es redundante.
+    with get_db_cursor() as cursor:
+        cursor.execute(query, params)
+        return cursor.fetchall()
+
+# Función para ejecutar una consulta que devuelve un solo resultado
+def fetch_one(query, params=None):
     """
-    if row is None:
+    Ejecuta una consulta SQL y devuelve un solo resultado.
+    
+    Args:
+        query (str): Consulta SQL a ejecutar
+        params (tuple, optional): Parámetros para la consulta
+        
+    Returns:
+        dict: Diccionario con el resultado o None si no hay resultados
+    """
+    with get_db_cursor() as cursor:
+        cursor.execute(query, params)
+        return cursor.fetchone()
+
+# Función para ejecutar una consulta que no devuelve resultados (INSERT, UPDATE, DELETE)
+def execute_query(query, params=None):
+    """
+    Ejecuta una consulta SQL que modifica datos.
+    
+    Args:
+        query (str): Consulta SQL a ejecutar
+        params (tuple, optional): Parámetros para la consulta
+        
+    Returns:
+        int: Número de filas afectadas
+    """
+    with get_db_cursor(commit=True) as cursor:
+        cursor.execute(query, params)
+        return cursor.rowcount
+
+# Función para ejecutar una consulta que devuelve el ID del registro insertado
+def execute_query_returning_id(query, params=None):
+    """
+    Ejecuta una consulta SQL INSERT que devuelve el ID del registro insertado.
+    
+    Args:
+        query (str): Consulta SQL a ejecutar (debe incluir RETURNING id)
+        params (tuple, optional): Parámetros para la consulta
+        
+    Returns:
+        int: ID del registro insertado
+    """
+    with get_db_cursor(commit=True) as cursor:
+        cursor.execute(query, params)
+        result = cursor.fetchone()
+        if result:
+            return result.get('id')
         return None
-    
-    return dict(row)
 
-def rows_to_list(rows):
+# Función para ejecutar una función almacenada que devuelve resultados
+def call_function_returning_rows(function_name, params=None):
     """
-    Convierte múltiples filas a una lista de diccionarios.
-    Esta función se mantiene por compatibilidad, pero con RealDictCursor es casi redundante.
-    """
-    if rows is None:
-        return []
+    Ejecuta una función almacenada que devuelve resultados.
     
-    return [row_to_dict(row) for row in rows]
+    Args:
+        function_name (str): Nombre de la función almacenada
+        params (tuple, optional): Parámetros para la función
+        
+    Returns:
+        list: Lista de diccionarios con los resultados
+    """
+    with get_db_cursor() as cursor:
+        # Construir la consulta para llamar a la función
+        query = f"SELECT * FROM {function_name}("
+        if params:
+            placeholders = ", ".join(["%s" for _ in range(len(params))])
+            query += placeholders
+        query += ")"
+        
+        cursor.execute(query, params)
+        return cursor.fetchall()
+
+# Función para ejecutar una función almacenada que devuelve un solo registro
+def call_function_returning_one(function_name, params=None):
+    """
+    Ejecuta una función almacenada que devuelve un solo registro.
+    
+    Args:
+        function_name (str): Nombre de la función almacenada
+        params (tuple, optional): Parámetros para la función
+        
+    Returns:
+        dict: Diccionario con el resultado o None si no hay resultados
+    """
+    with get_db_cursor() as cursor:
+        # Construir la consulta para llamar a la función
+        query = f"SELECT * FROM {function_name}("
+        if params:
+            placeholders = ", ".join(["%s" for _ in range(len(params))])
+            query += placeholders
+        query += ")"
+        
+        cursor.execute(query, params)
+        return cursor.fetchone()
+
+# Función para convertir resultados de RealDictCursor a un formato serializable
+def clean_db_results(results):
+    """
+    Convierte los resultados de la base de datos a un formato serializable.
+    Maneja tipos de datos como datetime, UUID, etc.
+    
+    Args:
+        results: Resultados de la base de datos (dict o list de dicts)
+        
+    Returns:
+        dict o list: Resultados en formato serializable
+    """
+    import json
+    from datetime import datetime, date
+    
+    class CustomJSONEncoder(json.JSONEncoder):
+        def default(self, obj):
+            if isinstance(obj, (datetime, date)):
+                return obj.isoformat()
+            return super().default(obj)
+    
+    # Convertir a JSON y luego de vuelta a dict para asegurar serialización
+    if isinstance(results, list):
+        serializable = json.loads(json.dumps(results, cls=CustomJSONEncoder))
+    else:
+        serializable = json.loads(json.dumps(dict(results), cls=CustomJSONEncoder))
+    
+    return serializable

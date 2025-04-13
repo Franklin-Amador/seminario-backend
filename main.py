@@ -1,115 +1,71 @@
-from fastapi import FastAPI, Request, HTTPException
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from contextlib import asynccontextmanager
-from strawberry.fastapi import GraphQLRouter
-import uvicorn
-import logging
-from dotenv import load_dotenv
+from fastapi.responses import JSONResponse
 
-# Cargar variables de entorno desde el archivo .env
-load_dotenv()
+# Importar los controladores
+import controllers.user_controller as user_controller
+import controllers.courses_controller as courses_controller
+import controllers.category_controller as category_controller
+import controllers.assignments_controller as assignments_controller
+import controllers.submission_controller as submission_controller
+import controllers.grades_controller as grades_controller
+import controllers.enrollments_controller as enrollments_controller
+import controllers.forum_controller as forum_controller
+import controllers.resources_controller as resources_controller
+import controllers.role_controller as role_controller
+import controllers.sections_controller as sections_controller
+import controllers.file_controller as file_controller
+import controllers.login_controller as login_controller
 
-# Importar los controladores existentes
-from controllers.high_performance_login_controller import login, update_password, reset_all_passwords
-from controllers.high_performance_login_controller import LoginRequest, LoginResponse, BulkPasswordUpdateRequest, BulkPasswordUpdateResponse, UpdatePasswordRequest
-
-# Importar nuestro esquema GraphQL y la conexión a BD
-from schema import schema
-from db import close_pool, Database
-
-# Configurar logging para toda la aplicación
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-)
-logger = logging.getLogger(__name__)
-
-# Función de lifespan para gestionar la inicialización y cierre de recursos
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    # Código que se ejecuta antes de iniciar la aplicación
-    logger.info("Iniciando aplicación...")
-    try:
-        # Verificar la conexión a la base de datos
-        pool = Database.get_pool()
-        if pool:
-            logger.info("Pool de conexiones verificado")
-        else:
-            logger.warning("El pool de conexiones no está disponible")
-    except Exception as e:
-        logger.error(f"Error al verificar el pool de conexiones: {str(e)}")
-    
-    yield  # Aquí se ejecuta la aplicación
-    
-    # Código que se ejecuta al cerrar la aplicación
-    logger.info("Cerrando aplicación...")
-    try:
-        close_pool()
-        logger.info("Recursos liberados correctamente")
-    except Exception as e:
-        logger.error(f"Error al liberar recursos: {str(e)}")
-
-# Crear la aplicación FastAPI con el lifespan
+# Crear la aplicación FastAPI
 app = FastAPI(
-    title="Campus Virtual API", 
-    description="Backend API para Campus Virtual",
-    lifespan=lifespan
+    title="Campus Virtual API",
+    description="API para gestionar un campus virtual educativo",
+    version="1.0.0"
 )
 
 # Configurar CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # En producción, especificar dominios permitidos
+    allow_origins=["*"],  # En producción, especificar los dominios permitidos
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Middleware para logging de solicitudes
-@app.middleware("http")
-async def log_requests(request: Request, call_next):
-    logger.info(f"Request: {request.method} {request.url}")
-    try:
-        response = await call_next(request)
-        logger.info(f"Response status: {response.status_code}")
-        return response
-    except Exception as e:
-        logger.error(f"Error processing request: {str(e)}")
-        raise
+# Manejador de errores personalizado
+@app.exception_handler(Exception)
+async def global_exception_handler(request, exc):
+    return JSONResponse(
+        status_code=500,
+        content={"message": f"Error interno del servidor: {str(exc)}"}
+    )
 
-# Añadir la ruta GraphQL
-graphql_router = GraphQLRouter(schema)
-app.include_router(graphql_router, prefix="/graphql")
+# Incluir los routers de los controladores
+app.include_router(user_controller.router)
+app.include_router(courses_controller.router)
+app.include_router(category_controller.router)
+app.include_router(assignments_controller.router)
+app.include_router(submission_controller.router)
+app.include_router(grades_controller.router)
+app.include_router(enrollments_controller.router)
+app.include_router(forum_controller.router)
+app.include_router(resources_controller.router)
+app.include_router(role_controller.router)
+app.include_router(sections_controller.router)
+app.include_router(file_controller.router, tags=["files"])
+app.include_router(login_controller.router, tags=["login"])
 
-# Rutas existentes para login
-@app.post("/api/login", response_model=LoginResponse)
-async def login_endpoint(request: Request, login_data: LoginRequest):
-    return await login(login_data, request)
-
-@app.put("/api/update_password", response_model=LoginResponse)
-async def update_password_endpoint(update_data: UpdatePasswordRequest):
-    return await update_password(update_data)
-
-@app.put("/api/reset_all_passwords", response_model=BulkPasswordUpdateResponse)
-async def reset_all_passwords_endpoint(update_data: BulkPasswordUpdateRequest):
-    return await reset_all_passwords(update_data)
-
-# Ruta de verificación de estado
-@app.get("/health")
-def health_check():
-    return {"status": "ok", "message": "API funcionando correctamente"}
-
-# Ruta raíz
+# Endpoint de salud
 @app.get("/")
-def read_root():
-    logger.info("Acceso a la ruta raíz")
-    return {
-        "message": "Bienvenido a la API del Campus Virtual",
-        "docs": "/docs",
-        "graphql": "/graphql"
-    }
+async def root():
+    return {"message": "Campus Virtual API está en funcionamiento"}
 
-# Punto de entrada para ejecución directa
+@app.get("/health")
+async def health_check():
+    return {"status": "ok", "version": "1.0.0"}
+
+# Ejecutar el servidor (si se ejecuta directamente)
 if __name__ == "__main__":
-    logger.info("Iniciando servidor...")
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
