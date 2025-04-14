@@ -112,8 +112,9 @@ export let options = {
   },
 };
 
-// GraphQL queries
+// GraphQL queries adaptadas según los modelos de types_graphql.py
 const queries = {
+  // User queries - Agregados todos los campos del modelo User
   users: `query {
     users {
       id
@@ -121,6 +122,13 @@ const queries = {
       firstname
       lastname
       email
+      confirmed
+      deleted
+      suspended
+      institution
+      department
+      timecreated
+      timemodified
     }
   }`,
 
@@ -131,16 +139,34 @@ const queries = {
       firstname
       lastname
       email
+      confirmed
+      deleted
+      suspended
+      institution
+      department
+      timecreated
+      timemodified
     }
   }`,
 
+  // Course queries - Adaptados a los campos del modelo Course
   courses: `query {
     courses {
       id
+      category
+      sortorder
       fullname
       shortname
-      visible
+      idnumber
+      summary
+      format
+      showgrades
+      newsitems
       startdate
+      enddate
+      visible
+      groupmode
+      timecreated
       timemodified
     }
   }`,
@@ -148,30 +174,55 @@ const queries = {
   course: (courseId) => `query {
     course(courseId: ${courseId}) {
       id
+      category
+      sortorder
       fullname
       shortname
-      visible
+      idnumber
+      summary
+      format
+      showgrades
+      newsitems
       startdate
+      enddate
+      visible
+      groupmode
+      timecreated
       timemodified
     }
   }`,
 
+  // Section queries - Agregados todos los campos disponibles en el modelo Section
   courseSections: (courseId) => `query {
     courseSections(courseId: ${courseId}) {
       id
       course
       section
       name
+      summary
+      sequence
       visible
+      availability
+      timemodified
     }
   }`,
 
+  // Category queries - Agregados todos los campos disponibles
   categories: `query {
     categories {
       id
       name
+      idnumber
       description
+      parent
+      sortorder
+      coursecount
       visible
+      visibleold
+      timemodified
+      depth
+      path
+      theme
     }
   }`,
 
@@ -179,17 +230,29 @@ const queries = {
     category(categoryId: ${categoryId}) {
       id
       name
+      idnumber
       description
+      parent
+      sortorder
+      coursecount
       visible
+      visibleold
+      timemodified
+      depth
+      path
+      theme
     }
   }`,
 
+  // Role queries - Adaptados al modelo Role
   roles: `query {
     roles {
       id
       name
       shortname
       description
+      sortorder
+      archetype
     }
   }`,
 
@@ -199,9 +262,12 @@ const queries = {
       name
       shortname
       description
+      sortorder
+      archetype
     }
   }`,
 
+  // Assignment queries - Adaptados al modelo Assignment
   assignments: (courseId, sectionId) => {
     if (courseId && sectionId) {
       return `query {
@@ -209,9 +275,15 @@ const queries = {
           id
           course
           name
+          intro
           section
           duedate
+          allowsubmissionsfromdate
           grade
+          timemodified
+          completionsubmit
+          cutoffdate
+          gradingduedate
         }
       }`;
     } else {
@@ -220,9 +292,15 @@ const queries = {
           id
           course
           name
+          intro
           section
           duedate
+          allowsubmissionsfromdate
           grade
+          timemodified
+          completionsubmit
+          cutoffdate
+          gradingduedate
         }
       }`;
     }
@@ -233,9 +311,15 @@ const queries = {
       id
       course
       name
+      intro
       section
       duedate
+      allowsubmissionsfromdate
       grade
+      timemodified
+      completionsubmit
+      cutoffdate
+      gradingduedate
     }
   }`,
 
@@ -244,9 +328,15 @@ const queries = {
       id
       course
       name
+      intro
       section
       duedate
+      allowsubmissionsfromdate
       grade
+      timemodified
+      completionsubmit
+      cutoffdate
+      gradingduedate
     }
   }`,
 
@@ -255,9 +345,15 @@ const queries = {
       id
       course
       name
+      intro
       section
       duedate
+      allowsubmissionsfromdate
       grade
+      timemodified
+      completionsubmit
+      cutoffdate
+      gradingduedate
     }
   }`,
 
@@ -266,19 +362,30 @@ const queries = {
       id
       course
       name
+      intro
       section
       duedate
+      allowsubmissionsfromdate
       grade
+      timemodified
+      completionsubmit
+      cutoffdate
+      gradingduedate
     }
   }`,
 
+  // Submission queries - Adaptados al modelo Submission
   submissions: (assignmentId) => `query {
     submissions(assignmentId: ${assignmentId}) {
       id
       assignment
       userid
-      status
       timecreated
+      timemodified
+      status
+      groupid
+      attemptnumber
+      latest
     }
   }`,
 
@@ -287,50 +394,70 @@ const queries = {
       id
       assignment
       userid
-      status
       timecreated
+      timemodified
+      status
+      groupid
+      attemptnumber
+      latest
     }
   }`,
 
+  // Enrollment queries - Adaptados al modelo Enrollment
   courseEnrollments: (courseId) => `query {
     courseEnrollments(courseId: ${courseId}) {
       id
-      courseid
+      enrolid
       userid
+      courseid
       status
       timestart
       timeend
+      timecreated
+      timemodified
     }
   }`,
 
+  // La query userEnrollments incluye campos de Course anidados
   userEnrollments: (userId) => `query {
     userEnrollments(userId: ${userId}) {
       id
-      courseid
+      enrolid
       userid
+      courseid
       status
       timestart
       timeend
+      timecreated
+      timemodified
       course {
         id
         fullname
         shortname
+        visible
+        startdate
+        enddate
       }
     }
   }`,
 
+  // Section queries - Adaptados al modelo Section
   sections: (courseId) => `query {
     sections(courseId: ${courseId}) {
       id
       course
       section
       name
+      summary
+      sequence
       visible
+      availability
+      timemodified
     }
   }`,
 };
 
-// GraphQL mutations
+// GraphQL mutations adaptadas a los campos de los modelos
 const mutations = {
   createRole: (input) => `mutation {
     createRole(input: {
@@ -344,6 +471,8 @@ const mutations = {
       name
       shortname
       description
+      sortorder
+      archetype
     }
   }`,
 
@@ -362,6 +491,8 @@ const mutations = {
       name
       shortname
       description
+      sortorder
+      archetype
     }
   }`,
 
@@ -370,6 +501,9 @@ const mutations = {
       id
       name
       shortname
+      description
+      sortorder
+      archetype
     }
   }`,
 
@@ -388,6 +522,13 @@ const mutations = {
       firstname
       lastname
       email
+      confirmed
+      deleted
+      suspended
+      institution
+      department
+      timecreated
+      timemodified
     }
   }`,
 
@@ -400,6 +541,8 @@ const mutations = {
       idnumber: ${input.idnumber ? `"${input.idnumber}"` : "null"},
       summary: ${input.summary ? `"${input.summary}"` : "null"},
       format: "${input.format}",
+      showgrades: ${input.showgrades || true},
+      newsitems: ${input.newsitems || 5},
       startdate: "${input.startdate.toISOString()}",
       enddate: ${input.enddate ? `"${input.enddate.toISOString()}"` : "null"},
       visible: ${input.visible}
@@ -407,6 +550,12 @@ const mutations = {
       id
       fullname
       shortname
+      category
+      sortorder
+      visible
+      startdate
+      enddate
+      timemodified
     }
   }`,
 
@@ -421,6 +570,8 @@ const mutations = {
         idnumber: ${input.idnumber ? `"${input.idnumber}"` : "null"},
         summary: ${input.summary ? `"${input.summary}"` : "null"},
         format: "${input.format}",
+        showgrades: ${input.showgrades || true},
+        newsitems: ${input.newsitems || 5},
         startdate: "${input.startdate.toISOString()}",
         enddate: ${input.enddate ? `"${input.enddate.toISOString()}"` : "null"},
         visible: ${input.visible}
@@ -429,6 +580,11 @@ const mutations = {
       id
       fullname
       shortname
+      category
+      visible
+      startdate
+      enddate
+      timemodified
     }
   }`,
 
@@ -444,11 +600,24 @@ const mutations = {
           ? `"${input.allowsubmissionsfromdate.toISOString()}"`
           : "null"
       },
-      grade: ${input.grade ?? "null"}
+      grade: ${input.grade ?? "null"},
+      completionsubmit: ${input.completionsubmit || true},
+      cutoffdate: ${
+        input.cutoffdate ? `"${input.cutoffdate.toISOString()}"` : "null"
+      },
+      gradingduedate: ${
+        input.gradingduedate
+          ? `"${input.gradingduedate.toISOString()}"`
+          : "null"
+      }
     }) {
       id
       name
       course
+      section
+      duedate
+      grade
+      timemodified
     }
   }`,
 
@@ -466,12 +635,25 @@ const mutations = {
             ? `"${input.allowsubmissionsfromdate.toISOString()}"`
             : "null"
         },
-        grade: ${input.grade ?? "null"}
+        grade: ${input.grade ?? "null"},
+        completionsubmit: ${input.completionsubmit || true},
+        cutoffdate: ${
+          input.cutoffdate ? `"${input.cutoffdate.toISOString()}"` : "null"
+        },
+        gradingduedate: ${
+          input.gradingduedate
+            ? `"${input.gradingduedate.toISOString()}"`
+            : "null"
+        }
       }
     ) {
       id
       name
       course
+      section
+      duedate
+      grade
+      timemodified
     }
   }`,
 
@@ -487,8 +669,14 @@ const mutations = {
       timeend: ${input.timeend ? `"${input.timeend.toISOString()}"` : "null"}
     }) {
       id
+      enrolid
       userid
       courseid
+      status
+      timestart
+      timeend
+      timecreated
+      timemodified
     }
   }`,
 
@@ -507,16 +695,23 @@ const mutations = {
       }
     ) {
       id
+      enrolid
       userid
       courseid
+      status
+      timestart
+      timeend
+      timemodified
     }
   }`,
 
   deleteEnrollment: (enrollmentId) => `mutation {
     deleteEnrollment(enrollmentId: ${enrollmentId}) {
       id
+      enrolid
       userid
       courseid
+      status
     }
   }`,
 
@@ -530,7 +725,13 @@ const mutations = {
     }) {
       id
       course
+      section
       name
+      summary
+      sequence
+      visible
+      availability
+      timemodified
     }
   }`,
 
@@ -547,7 +748,13 @@ const mutations = {
     ) {
       id
       course
+      section
       name
+      summary
+      sequence
+      visible
+      availability
+      timemodified
     }
   }`,
 
@@ -555,7 +762,9 @@ const mutations = {
     deleteSection(sectionId: ${sectionId}) {
       id
       course
+      section
       name
+      visible
     }
   }`,
 
@@ -567,6 +776,13 @@ const mutations = {
         email
         firstname
         lastname
+        confirmed
+        deleted
+        suspended
+        institution
+        department
+        timecreated
+        timemodified
       }
       error {
         message
@@ -581,6 +797,9 @@ const mutations = {
         id
         username
         email
+        firstname
+        lastname
+        confirmed
       }
       error {
         message
